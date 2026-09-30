@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "744537744434",
+    "project_id": "rampdb123",
+    "storage_bucket": "rampdb123.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:744537744434:android:7f35c6f75e7d17d0fa882b",
+        "android_client_info": {
+          "package_name": "com.example.ramp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBEupEaVWNALulZdADc9s1KUImBHNz-ME0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isLandlord() {
+      return isAuthenticated();
+    }
+
+    // Units Collection
+    match /units/{unitId} {
+      allow read: if true;
+      allow write: if isLandlord();
+    }
+
+    // Tenants Collection
+    match /tenants/{tenantId} {
+      allow read, write: if isLandlord();
+    }
+
+    // Payments Collection
+    match /payments/{paymentId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Maintenance Tickets Collection
+    match /maintenanceTickets/{ticketId} {
+      allow read, create: if true;
+      allow update, delete: if isLandlord();
+    }
+
+    // Audit Logs Collection (Immutable Circular Buffer)
+    match /audit_logs/{logId} {
+      allow read, create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    // Settings Collection
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isLandlord();
+    }
+
+    // Announcements Collection
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow write: if isLandlord();
+    }
+
+    // Notifications Collection
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated();
+      allow write: if isLandlord();
+    }
+
+    // Expenses Collection
+    match /expenses/{expenseId} {
+      allow read, write: if isLandlord();
+    }
+
+    // Tenant Documents Collection
+    match /tenantDocuments/{documentId} {
+      allow read: if isAuthenticated();
+      allow write: if isLandlord();
+    }
+
+    // Utility Rate Logs Collection
+    match /utilityRateLogs/{logId} {
+      allow read: if isAuthenticated();
+      allow write: if isLandlord();
+    }
+
+    // Default catch-all rule
+    match /{document=**} {
+      allow read, write: if isLandlord();
+    }
+  }
+}
