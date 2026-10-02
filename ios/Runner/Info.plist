@@ -70,5 +70,13 @@
 	<string>RAMP requires location access to track maintenance dispatch and pin unit locations on the map.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>RAMP requires background location for live maintenance technician dispatch tracking.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>sms</string>
+		<string>smsto</string>
+		<string>fb-messenger</string>
+		<string>https</string>
+		<string>http</string>
+	</array>
 </dict>
 </plist>

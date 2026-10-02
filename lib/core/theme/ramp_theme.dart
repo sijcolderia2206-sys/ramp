@@ -46,6 +46,18 @@ class RampColors {
 
   /// Subtle Border
   static const Color border = Color(0xFFE2E8F0);
+  
+  /// Dark Mode Colors
+  static const Color darkBackground = Color(0xFF0F172A);
+  static const Color darkSurface = Color(0xFF1E293B);
+  static const Color darkBorder = Color(0xFF334155);
+
+  /// Primary Gradient
+  static const LinearGradient primaryGradient = LinearGradient(
+    colors: [Color(0xFF0D6EFD), Color(0xFF0056B3)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 
   /// Glass / Frosted Overlay
   static const Color glassBackground = Color(0xCCFFFFFF);
@@ -54,19 +66,13 @@ class RampColors {
 
 /// Theme configuration using Google Fonts Poppins with flat minimalist defaults
 class RampTheme {
-  /// Subtle standard drop shadow for minimalist cards
-  static const List<BoxShadow> flatShadows = [
-    BoxShadow(
-      color: Color(0x0A000000),
-      blurRadius: 10,
-      offset: Offset(0, 4),
-    ),
-  ];
+  /// Flat shadowless configuration for cards
+  static const List<BoxShadow> flatShadows = [];
 
   static const BoxShadow softShadow = BoxShadow(
-    color: Color(0x08000000),
-    blurRadius: 10,
-    offset: Offset(0, 4),
+    color: Colors.transparent,
+    blurRadius: 0,
+    offset: Offset.zero,
   );
 
   /// Standard 20px card border radius

@@ -747,25 +747,26 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                         location: locationCtrl.text.trim(),
                         latitude: selectedLat,
                         longitude: selectedLng,
-                        rent: rent,
-                        monthlyRent: rent,
-                        area: area,
-                        areaSqm: area,
+                        rent: rent ?? 8500.0,
+                        monthlyRent: rent ?? 8500.0,
+                        area: area ?? 28.0,
+                        areaSqm: area ?? 28.0,
                         status: status,
                         imageUrl: imageUrl,
-                        rentDueDay: dueDay,
-                        lateFee: lateFee,
+                        rentDueDay: dueDay ?? 5,
+                        lateFee: lateFee ?? 500.0,
                         vacantDays:
                             status == 'Vacant' ? existingUnit.vacantDays : 0,
                         detailsCompleted: true,
                         waterUtilityEnabled: waterEnabled,
                         electricityUtilityEnabled: electricityEnabled,
-                        waterRateOverride: waterOverride,
-                        electricityRateOverride: electricityOverride,
-                        clearWaterRateOverride:
-                            !waterEnabled || useMasterWaterRate,
-                        clearElectricityRateOverride:
-                            !electricityEnabled || useMasterElectricityRate,
+                        waterRateOverride: (!waterEnabled || useMasterWaterRate)
+                            ? null
+                            : waterOverride,
+                        electricityRateOverride:
+                            (!electricityEnabled || useMasterElectricityRate)
+                                ? null
+                                : electricityOverride,
                       )
                     : Unit(
                         id: 'u_${DateTime.now().millisecondsSinceEpoch}',
@@ -773,13 +774,25 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                         location: locationCtrl.text.trim(),
                         latitude: selectedLat,
                         longitude: selectedLng,
-                        rent: 0,
-                        area: 0,
-                        status: 'Vacant',
+                        rent: rent ?? 8500.0,
+                        monthlyRent: rent ?? 8500.0,
+                        area: area ?? 28.0,
+                        areaSqm: area ?? 28.0,
+                        status: status,
+                        imageUrl: imageUrl,
+                        rentDueDay: dueDay ?? 5,
+                        lateFee: lateFee ?? 500.0,
+                        vacantDays: 0,
                         inclusions: const [],
-                        detailsCompleted: false,
-                        waterUtilityEnabled: false,
-                        electricityUtilityEnabled: false,
+                        detailsCompleted: true,
+                        waterUtilityEnabled: waterEnabled,
+                        electricityUtilityEnabled: electricityEnabled,
+                        waterRateOverride: (!waterEnabled || useMasterWaterRate)
+                            ? null
+                            : waterOverride,
+                        electricityRateOverride: (!electricityEnabled || useMasterElectricityRate)
+                            ? null
+                            : electricityOverride,
                       );
 
                 if (isEditing) {
@@ -792,13 +805,13 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                   SnackBar(
                     content: Text(isEditing
                         ? 'Unit details updated!'
-                        : 'Vacant unit created. Add details when ready.'),
+                        : 'New unit created successfully.'),
                     backgroundColor: RampColors.success,
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
               },
-              label: Text(isEditing ? 'SAVE DETAILS' : 'CREATE VACANT UNIT',
+              label: Text(isEditing ? 'SAVE DETAILS' : 'SAVE UNIT',
                   style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
             ),
           ],
@@ -856,45 +869,6 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'occupied':
-        return RampColors.success;
-      case 'maintenance':
-        return RampColors.warning;
-      case 'vacant':
-      default:
-        return RampColors.primary;
-    }
-  }
-
-  Widget _buildUnitImage(String path,
-      {double width = 112, double height = 88}) {
-    final fallback = Container(
-      width: width,
-      height: height,
-      color: RampColors.softBlueTint,
-      child:
-          const Icon(Icons.home_rounded, color: RampColors.primary, size: 32),
-    );
-    if (path.startsWith('/') || path.contains(':\\')) {
-      return Image.file(
-        File(path),
-        width: width,
-        height: height,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => fallback,
-      );
-    }
-    return Image.network(
-      path,
-      width: width,
-      height: height,
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => fallback,
     );
   }
 
@@ -1151,263 +1125,18 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                           final tenant = tenants
                               .where((t) => t.unitId == unit.id)
                               .firstOrNull;
-                          final tenantName = unit.tenantName ??
-                              tenant?.name ??
-                              'Vacant - No Tenant';
-                          final statusColor = _getStatusColor(unit.status);
-                          final isLongVacant = unit.isLongVacant;
 
                           return StaggeredListItem(
                             index: index,
                             child: Padding(
                               padding: const EdgeInsets.only(bottom: 16.0),
-                              child: Card(
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  side: BorderSide(
-                                    color: Theme.of(context).colorScheme.outlineVariant,
-                                  ),
-                                ),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(16),
-                                  onTap: () => _openUnitDetails(unit),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              child: _buildUnitImage(unit.imageUrl),
-                                            ),
-                                            const SizedBox(width: 14),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    unit.name,
-                                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                                      fontWeight: FontWeight.bold,
-                                                      color: Theme.of(context).colorScheme.onSurface,
-                                                    ),
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    unit.location,
-                                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                      fontSize: 12,
-                                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                                    ),
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                  if (!unit.detailsCompleted) ...[
-                                                    const SizedBox(height: 2),
-                                                    Text(
-                                                      'Basic profile • Add details',
-                                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                        fontSize: 11,
-                                                        color: Theme.of(context).colorScheme.primary,
-                                                        fontWeight: FontWeight.w600,
-                                                      ),
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
-                                                    ),
-                                                  ],
-                                                  const SizedBox(height: 6),
-                                                  Text(
-                                                    unit.detailsCompleted
-                                                        ? unit.formattedRent
-                                                        : 'Details pending',
-                                                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                                      fontWeight: FontWeight.bold,
-                                                      color: Theme.of(context).colorScheme.primary,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 8),
-                                                  Container(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                      horizontal: 10,
-                                                      vertical: 4,
-                                                    ),
-                                                    decoration: BoxDecoration(
-                                                      color: statusColor.withValues(
-                                                          alpha: 0.15),
-                                                      borderRadius:
-                                                          BorderRadius.circular(8),
-                                                    ),
-                                                    child: Text(
-                                                      unit.status,
-                                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                        fontSize: 11,
-                                                        color: statusColor,
-                                                        fontWeight: FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            const SizedBox(width: 4),
-                                            PopupMenuButton<String>(
-                                              icon: Icon(
-                                                  Icons.more_vert_rounded,
-                                                  size: 20,
-                                                  color: Theme.of(context).colorScheme.onSurfaceVariant),
-                                              onSelected: (val) {
-                                                if (val == 'edit') {
-                                                  _showAddEditDialog(
-                                                      existingUnit: unit);
-                                                } else if (val == 'delete') {
-                                                  _showDeleteConfirmation(unit);
-                                                }
-                                              },
-                                              itemBuilder: (context) => [
-                                                const PopupMenuItem(
-                                                  value: 'edit',
-                                                  child: Row(
-                                                    children: [
-                                                      Icon(Icons.edit_rounded,
-                                                          size: 18),
-                                                      SizedBox(width: 8),
-                                                      Text('Add / Edit Details'),
-                                                    ],
-                                                  ),
-                                                ),
-                                                PopupMenuItem(
-                                                  value: 'delete',
-                                                  child: Row(
-                                                    children: [
-                                                      Icon(Icons.delete_rounded,
-                                                          size: 18,
-                                                          color: Theme.of(context).colorScheme.error),
-                                                      const SizedBox(width: 8),
-                                                      Text('Delete',
-                                                          style: TextStyle(
-                                                              color: Theme.of(context).colorScheme.error)),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                        if (isLongVacant) ...[
-                                          const SizedBox(height: 12),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 10, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: Theme.of(context).colorScheme.errorContainer,
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              'Vacant for ${unit.vacantDays} days',
-                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                  fontSize: 11,
-                                                  color: Theme.of(context).colorScheme.onErrorContainer,
-                                                  fontWeight: FontWeight.w600),
-                                            ),
-                                          ),
-                                        ],
-                                        const SizedBox(height: 12),
-                                        Divider(
-                                          height: 1,
-                                          color: Theme.of(context).colorScheme.outlineVariant,
-                                        ),
-                                        const SizedBox(height: 12),
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              tenantName.startsWith('Vacant')
-                                                  ? Icons.key_outlined
-                                                  : Icons.person_outline,
-                                              size: 18,
-                                              color: tenantName.startsWith('Vacant')
-                                                  ? Theme.of(context).colorScheme.primary
-                                                  : Theme.of(context).colorScheme.onSurfaceVariant,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                tenantName,
-                                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                  color: Theme.of(context).colorScheme.onSurface,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 12),
-                                        CompactInfoGrid(
-                                          items: [
-                                            CompactInfoItem(
-                                              label: 'Rent',
-                                              value: _currencyFormat
-                                                  .format(unit.rent),
-                                              icon: Icons.payments_outlined,
-                                              valueColor: RampColors.success,
-                                            ),
-                                            CompactInfoItem(
-                                              label: 'Due',
-                                              value: unit.formattedDueDate,
-                                              icon: Icons.calendar_today_rounded,
-                                            ),
-                                            CompactInfoItem(
-                                              label: 'Layout',
-                                              value:
-                                                  '${unit.area.toStringAsFixed(0)} sqm',
-                                              icon: Icons.aspect_ratio_outlined,
-                                            ),
-                                            CompactInfoItem(
-                                              label: 'Inclusions',
-                                              value: unit.inclusions.join(', '),
-                                              icon: Icons.wifi_rounded,
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: OutlinedButton.icon(
-                                                onPressed: () =>
-                                                    _openUnitDetails(unit),
-                                                icon: const Icon(
-                                                    Icons.visibility_outlined,
-                                                    size: 18),
-                                                label: const Text('View details'),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 10),
-                                            IconButton.outlined(
-                                              tooltip: 'Edit property',
-                                              onPressed: () => _showAddEditDialog(
-                                                  existingUnit: unit),
-                                              icon: const Icon(
-                                                  Icons.edit_outlined,
-                                                  size: 18),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
+                              child: _PropertyUnitCard(
+                                unit: unit,
+                                tenant: tenant,
+                                onTap: () => _openUnitDetails(unit),
+                                onEdit: () =>
+                                    _showAddEditDialog(existingUnit: unit),
+                                onDelete: () => _showDeleteConfirmation(unit),
                               ),
                             ),
                           );
@@ -1431,6 +1160,877 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
         ),
       ),
     );
+  }
+}
+
+class _PropertyUnitCard extends StatefulWidget {
+  final Unit unit;
+  final Tenant? tenant;
+  final VoidCallback onTap;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _PropertyUnitCard({
+    Key? key,
+    required this.unit,
+    this.tenant,
+    required this.onTap,
+    required this.onEdit,
+    required this.onDelete,
+  }) : super(key: key);
+
+  @override
+  State<_PropertyUnitCard> createState() => _PropertyUnitCardState();
+}
+
+class _PropertyUnitCardState extends State<_PropertyUnitCard> {
+  bool _isExpanded = false;
+
+  final NumberFormat _currencyFormat = NumberFormat.currency(
+    locale: 'en_PH',
+    symbol: '₱',
+    decimalDigits: 0,
+  );
+
+  Widget _buildFullUnitImage(String path, {double height = 160}) {
+    final fallback = Container(
+      height: height,
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF1E293B), Color(0xFF334155)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.apartment_rounded, color: Colors.white70, size: 48),
+          SizedBox(height: 6),
+          Text(
+            'RAMP Property Unit',
+            style: TextStyle(color: Colors.white54, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+
+    if (path.isEmpty) return fallback;
+
+    if (path.startsWith('/') || path.contains(':\\')) {
+      final file = File(path);
+      if (!file.existsSync()) return fallback;
+      return Image.file(
+        file,
+        width: double.infinity,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => fallback,
+      );
+    } else if (path.startsWith('http://') || path.startsWith('https://')) {
+      return Image.network(
+        path,
+        width: double.infinity,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => fallback,
+      );
+    } else if (path.startsWith('assets/')) {
+      return Image.asset(
+        path,
+        width: double.infinity,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => fallback,
+      );
+    }
+
+    return fallback;
+  }
+
+  Widget _buildTenantAvatar(Tenant? tenant, String name) {
+    final avatarUrl = tenant?.avatarUrl;
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      ImageProvider? provider;
+      if (avatarUrl.startsWith('http')) {
+        provider = NetworkImage(avatarUrl);
+      } else if (File(avatarUrl).existsSync()) {
+        provider = FileImage(File(avatarUrl));
+      }
+      if (provider != null) {
+        return CircleAvatar(
+          radius: 20,
+          backgroundImage: provider,
+        );
+      }
+    }
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'T';
+    return CircleAvatar(
+      radius: 20,
+      backgroundColor: RampColors.primary.withValues(alpha: 0.15),
+      child: Text(
+        initial,
+        style: const TextStyle(
+          color: RampColors.primary,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    final s = status.toLowerCase();
+    if (s == 'occupied') return RampColors.primary;
+    if (s == 'maintenance') return RampColors.warning;
+    return RampColors.success;
+  }
+
+  IconData _getStatusIcon(String status) {
+    final s = status.toLowerCase();
+    if (s == 'occupied') return Icons.person_rounded;
+    if (s == 'maintenance') return Icons.engineering_rounded;
+    return Icons.meeting_room_rounded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final unit = widget.unit;
+    final tenant = widget.tenant;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final statusColor = _getStatusColor(unit.status);
+    final statusIcon = _getStatusIcon(unit.status);
+
+    final unitNumDisplay = (unit.unitNumber != null && unit.unitNumber!.isNotEmpty)
+        ? unit.unitNumber!
+        : (unit.name.toLowerCase().contains('unit')
+            ? unit.name
+            : 'Unit ${unit.name}');
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. Full Image Header with Top-Left Unit Number & Top-Right Status Indication
+            Stack(
+              children: [
+                _buildFullUnitImage(unit.imageUrl ?? '', height: 160),
+
+                // Subtle bottom gradient overlay on image for contrast
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.4),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Top Left: Unit / Room Indication Pill Badge
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.75),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.white24, width: 1),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.meeting_room_outlined,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          unitNumDisplay,
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Top Right: Room Status Indication Badge
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: statusColor,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: statusColor.withValues(alpha: 0.4),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(statusIcon, color: Colors.white, size: 14),
+                        const SizedBox(width: 5),
+                        Text(
+                          unit.isVacant && unit.vacantDays > 0
+                              ? 'Vacant (${unit.vacantDays}d)'
+                              : unit.status,
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            // 2. Card Body Content Below Image
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title, Location, and Options Menu
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              unit.name,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.location_on_outlined,
+                                  size: 13,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 3),
+                                Expanded(
+                                  child: Text(
+                                    '${unit.floor} • ${unit.location}',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                          fontSize: 12,
+                                        ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      PopupMenuButton<String>(
+                        icon: Icon(
+                          Icons.more_vert_rounded,
+                          size: 20,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        onSelected: (val) {
+                          if (val == 'edit') {
+                            widget.onEdit();
+                          } else if (val == 'delete') {
+                            widget.onDelete();
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit_rounded, size: 18),
+                                SizedBox(width: 8),
+                                Text('Add / Edit Details'),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete_rounded,
+                                    size: 18,
+                                    color: Theme.of(context).colorScheme.error),
+                                const SizedBox(width: 8),
+                                Text('Delete',
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .error)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Summary Bar with Interactive Dropdown Toggle Button
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _isExpanded = !_isExpanded;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Theme.of(context).colorScheme.surfaceContainerHigh
+                            : RampColors.softBlueTint.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.payments_outlined,
+                                size: 16,
+                                color: RampColors.primary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _currencyFormat.format(unit.rent),
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: RampColors.primary,
+                                ),
+                              ),
+                              Text(
+                                ' / mo',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      fontSize: 11,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Text(
+                                _isExpanded ? 'Hide Specs' : 'Show Details',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                _isExpanded
+                                    ? Icons.keyboard_arrow_up_rounded
+                                    : Icons.keyboard_arrow_down_rounded,
+                                size: 18,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // 3. Dropdown Expandable Data Section
+                  AnimatedCrossFade(
+                    firstChild:
+                        const SizedBox(width: double.infinity, height: 0),
+                    secondChild: Padding(
+                      padding: const EdgeInsets.only(top: 12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Divider(height: 1),
+                          const SizedBox(height: 12),
+
+                          // STATUS CONDITION 1: VACANT
+                          if (unit.isVacant) ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildInfoSpecTile(
+                                    context,
+                                    icon: Icons.payments_outlined,
+                                    label: 'Monthly Rent',
+                                    value: _currencyFormat.format(unit.rent),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: _buildInfoSpecTile(
+                                    context,
+                                    icon: Icons.aspect_ratio_outlined,
+                                    label: 'Area Size',
+                                    value: '${unit.area.toStringAsFixed(0)} sqm',
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Inclusions:',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: unit.inclusions.map((inclusion) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainerHigh,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        _getInclusionIcon(inclusion),
+                                        size: 12,
+                                        color: RampColors.primary,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        inclusion,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            if (unit.isLongVacant) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .errorContainer,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'Attention: Vacant for ${unit.vacantDays} days',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        fontSize: 11,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onErrorContainer,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ]
+
+                          // STATUS CONDITION 2: OCCUPIED
+                          else if (unit.isOccupied) ...[
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainerHigh
+                                    : RampColors.softBlueTint
+                                        .withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: RampColors.primary
+                                      .withValues(alpha: 0.15),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  _buildTenantAvatar(
+                                    tenant,
+                                    unit.tenantName ??
+                                        tenant?.name ??
+                                        'Tenant',
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          unit.tenantName ??
+                                              tenant?.name ??
+                                              'Assigned Tenant',
+                                          style: GoogleFonts.poppins(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          tenant?.phone.isNotEmpty == true
+                                              ? tenant!.phone
+                                              : (tenant?.email.isNotEmpty ==
+                                                      true
+                                                  ? tenant!.email
+                                                  : 'Active Lease'),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                fontSize: 11,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          (tenant != null && tenant.balance > 0)
+                                              ? Theme.of(context)
+                                                  .colorScheme
+                                                  .errorContainer
+                                              : RampColors.success
+                                                  .withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      tenant != null && tenant.balance > 0
+                                          ? '₱${tenant.balance.toStringAsFixed(0)} Due'
+                                          : 'Rent Clear',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color:
+                                            tenant != null && tenant.balance > 0
+                                                ? Theme.of(context)
+                                                    .colorScheme
+                                                    .onErrorContainer
+                                                : RampColors.success,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.calendar_today_rounded,
+                                          size: 13,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          'Due: ${unit.formattedRentDueDay}',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(fontSize: 11),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.aspect_ratio_outlined,
+                                          size: 13,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          'Area: ${unit.area.toStringAsFixed(0)} sqm',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(fontSize: 11),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ]
+
+                          // STATUS CONDITION 3: MAINTENANCE
+                          else ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: RampColors.warning.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color:
+                                      RampColors.warning.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.engineering_rounded,
+                                    color: RampColors.warning,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Under Maintenance',
+                                          style: GoogleFonts.poppins(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            color: RampColors.warning,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Areas: ${unit.maintenanceAreas.join(", ")}',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                fontSize: 11,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Rent: ${_currencyFormat.format(unit.rent)}/mo',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    'Area: ${unit.area.toStringAsFixed(0)} sqm',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    crossFadeState: _isExpanded
+                        ? CrossFadeState.showSecond
+                        : CrossFadeState.showFirst,
+                    duration: const Duration(milliseconds: 250),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Bottom Action Button
+                  InkWell(
+                    onTap: widget.onTap,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Manage Unit & Utility Details',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 14,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoSpecTile(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: RampColors.primary),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 10,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getInclusionIcon(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('water')) return Icons.water_drop_outlined;
+    if (lower.contains('electric')) return Icons.bolt_outlined;
+    if (lower.contains('wifi') || lower.contains('internet'))
+      return Icons.wifi_rounded;
+    if (lower.contains('aircon') || lower.contains('ac'))
+      return Icons.ac_unit_rounded;
+    if (lower.contains('parking')) return Icons.local_parking_rounded;
+    if (lower.contains('kitchen')) return Icons.kitchen_rounded;
+    return Icons.check_circle_outline_rounded;
   }
 }
 
