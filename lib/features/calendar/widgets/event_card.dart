@@ -6,7 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/ramp_theme.dart';
 import '../../../core/state/ramp_state.dart';
-import '../../../screens/payments_screen.dart';
+import '../../../core/navigation/custom_page_transitions.dart';
+import '../../../screens/payment_form.dart';
 import '../../../screens/tenant_profile.dart';
 import '../../../screens/ticket_form.dart';
 import '../../../screens/unit_detail.dart';
@@ -36,7 +37,8 @@ class RampCalendarEventCard extends ConsumerWidget {
     }
   }
 
-  void _navigateTo(BuildContext context, WidgetRef ref, String route, {Tenant? tenant, Ticket? ticket}) {
+  void _navigateTo(BuildContext context, WidgetRef ref, String route,
+      {Tenant? tenant, Ticket? ticket}) {
     if (onCloseSheet != null) {
       onCloseSheet!();
     } else if (Navigator.canPop(context)) {
@@ -46,16 +48,16 @@ class RampCalendarEventCard extends ConsumerWidget {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (route == '/payments/new') {
         Navigator.of(context, rootNavigator: true).push(
-          MaterialPageRoute(builder: (_) => PaymentsScreen(initialTenant: tenant)),
+          SlideUpFadeRoute(page: PaymentFormScreen(initialTenant: tenant)),
         );
       } else if (route == '/maintenance/new') {
         Navigator.of(context, rootNavigator: true).push(
-          MaterialPageRoute(builder: (_) => const TicketFormScreen()),
+          SlideUpFadeRoute(page: const TicketFormScreen()),
         );
       } else if (route == '/maintenance') {
         if (ticket != null) {
           Navigator.of(context, rootNavigator: true).push(
-            MaterialPageRoute(builder: (_) => TicketFormScreen(existingTicket: ticket)),
+            SlideUpFadeRoute(page: TicketFormScreen(existingTicket: ticket)),
           );
         } else {
           ref.read(bottomNavIndexProvider.notifier).state = 2;
@@ -63,7 +65,8 @@ class RampCalendarEventCard extends ConsumerWidget {
       } else if (route == '/tenants') {
         if (tenant != null) {
           Navigator.of(context, rootNavigator: true).push(
-            MaterialPageRoute(builder: (_) => TenantProfileScreen(tenantId: tenant.id)),
+            MaterialPageRoute(
+                builder: (_) => TenantProfileScreen(tenantId: tenant.id)),
           );
         } else {
           ref.read(bottomNavIndexProvider.notifier).state = 3;
@@ -107,16 +110,7 @@ class RampCalendarEventCard extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.zero,
       borderRadius: 20,
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.04),
-          blurRadius: 10,
-          offset: const Offset(0, 4),
-        )
-      ],
-      borderColor: isOverdue
-          ? Colors.red.withValues(alpha: 0.4)
-          : Colors.transparent,
+      borderColor: Colors.transparent,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: IntrinsicHeight(
@@ -139,7 +133,10 @@ class RampCalendarEventCard extends ConsumerWidget {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: isCompleted ? Colors.green.withValues(alpha: 0.15) : categoryColor.withValues(alpha: isDark ? 0.2 : 0.12),
+                        color: isCompleted
+                            ? Colors.green.withValues(alpha: 0.15)
+                            : categoryColor.withValues(
+                                alpha: isDark ? 0.2 : 0.12),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Icon(
@@ -176,7 +173,9 @@ class RampCalendarEventCard extends ConsumerWidget {
                               style: theme.textTheme.titleSmall?.copyWith(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 14,
-                                decoration: isCompleted ? TextDecoration.lineThrough : null,
+                                decoration: isCompleted
+                                    ? TextDecoration.lineThrough
+                                    : null,
                                 color: isCompleted
                                     ? theme.colorScheme.onSurfaceVariant
                                     : theme.colorScheme.onSurface,
@@ -185,13 +184,16 @@ class RampCalendarEventCard extends ConsumerWidget {
                           ),
                           // Priority Badge
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
                             margin: const EdgeInsets.only(left: 8),
                             decoration: BoxDecoration(
-                              color: _priorityColor(event.priority).withValues(alpha: 0.12),
+                              color: _priorityColor(event.priority)
+                                  .withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: _priorityColor(event.priority).withValues(alpha: 0.3),
+                                color: _priorityColor(event.priority)
+                                    .withValues(alpha: 0.3),
                               ),
                             ),
                             child: Text(
@@ -226,7 +228,8 @@ class RampCalendarEventCard extends ConsumerWidget {
                         if (isOverdue) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.red.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(6),
@@ -244,23 +247,29 @@ class RampCalendarEventCard extends ConsumerWidget {
                       ],
                     ),
                     children: [
-                      if (event.description != null && event.description!.isNotEmpty) ...[
+                      if (event.description != null &&
+                          event.description!.isNotEmpty) ...[
                         Align(
                           alignment: Alignment.centerLeft,
                           child: Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E2022) : const Color(0xFFF1F5F9),
+                              color: isDark
+                                  ? const Color(0xFF1E2022)
+                                  : const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                color: theme.colorScheme.outlineVariant
+                                    .withValues(alpha: 0.3),
                               ),
                             ),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(Icons.info_outline_rounded, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                                Icon(Icons.info_outline_rounded,
+                                    size: 16,
+                                    color: theme.colorScheme.onSurfaceVariant),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
@@ -291,10 +300,13 @@ class RampCalendarEventCard extends ConsumerWidget {
                               icon: Icons.content_copy_rounded,
                               label: 'Copy Reminder',
                               onPressed: () {
-                                final text = 'Reminder: ${event.title} scheduled for ${DateFormat('MMMM d, yyyy').format(event.date)}. ${event.description ?? ''}';
+                                final text =
+                                    'Reminder: ${event.title} scheduled for ${DateFormat('MMMM d, yyyy').format(event.date)}. ${event.description ?? ''}';
                                 Clipboard.setData(ClipboardData(text: text));
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Reminder copied to clipboard.')),
+                                  const SnackBar(
+                                      content: Text(
+                                          'Reminder copied to clipboard.')),
                                 );
                               },
                               color: theme.colorScheme.onSurfaceVariant,
@@ -305,7 +317,9 @@ class RampCalendarEventCard extends ConsumerWidget {
                               _EventActionButton(
                                 icon: Icons.add_card_rounded,
                                 label: 'Receive Payment',
-                                onPressed: () => _navigateTo(context, ref, '/payments/new', tenant: tenant),
+                                onPressed: () => _navigateTo(
+                                    context, ref, '/payments/new',
+                                    tenant: tenant),
                                 color: Colors.green,
                               ),
 
@@ -314,7 +328,9 @@ class RampCalendarEventCard extends ConsumerWidget {
                               _EventActionButton(
                                 icon: Icons.person_outline_rounded,
                                 label: 'Tenant Profile',
-                                onPressed: () => _navigateTo(context, ref, '/tenants', tenant: tenant),
+                                onPressed: () => _navigateTo(
+                                    context, ref, '/tenants',
+                                    tenant: tenant),
                                 color: theme.colorScheme.primary,
                               ),
 
@@ -323,7 +339,9 @@ class RampCalendarEventCard extends ConsumerWidget {
                               _EventActionButton(
                                 icon: Icons.build_outlined,
                                 label: 'Open Ticket',
-                                onPressed: () => _navigateTo(context, ref, '/maintenance', ticket: ticket),
+                                onPressed: () => _navigateTo(
+                                    context, ref, '/maintenance',
+                                    ticket: ticket),
                                 color: const Color(0xFFF59E0B),
                               ),
 
@@ -332,24 +350,33 @@ class RampCalendarEventCard extends ConsumerWidget {
                               _EventActionButton(
                                 icon: Icons.apartment_rounded,
                                 label: 'Unit Details',
-                                onPressed: () => _navigateTo(context, ref, '/units/${unit.id}'),
+                                onPressed: () => _navigateTo(
+                                    context, ref, '/units/${unit.id}'),
                                 color: const Color(0xFF0EA5E9),
                               ),
 
                             // 6. Custom Event: Toggle Complete
                             if (isCustomEvent)
                               _EventActionButton(
-                                icon: isCompleted ? Icons.undo_rounded : Icons.check_circle_outline_rounded,
+                                icon: isCompleted
+                                    ? Icons.undo_rounded
+                                    : Icons.check_circle_outline_rounded,
                                 label: isCompleted ? 'Reopen' : 'Complete',
                                 onPressed: () {
-                                  ref.read(eventProvider.notifier).toggleEventCompleted(event.id);
+                                  ref
+                                      .read(eventProvider.notifier)
+                                      .toggleEventCompleted(event.id);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text(isCompleted ? 'Event marked incomplete' : 'Event marked completed!'),
+                                      content: Text(isCompleted
+                                          ? 'Event marked incomplete'
+                                          : 'Event marked completed!'),
                                     ),
                                   );
                                 },
-                                color: isCompleted ? theme.colorScheme.onSurfaceVariant : Colors.green,
+                                color: isCompleted
+                                    ? theme.colorScheme.onSurfaceVariant
+                                    : Colors.green,
                               ),
 
                             // 7. Custom Event: Edit
@@ -361,11 +388,15 @@ class RampCalendarEventCard extends ConsumerWidget {
                                   showModalBottomSheet(
                                     context: context,
                                     isScrollControlled: true,
-                                    backgroundColor: isDark ? theme.colorScheme.surface : Colors.white,
+                                    backgroundColor: isDark
+                                        ? theme.colorScheme.surface
+                                        : Colors.white,
                                     shape: const RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                                      borderRadius: BorderRadius.vertical(
+                                          top: Radius.circular(24)),
                                     ),
-                                    builder: (_) => AddEditEventSheet(existingEvent: event),
+                                    builder: (_) =>
+                                        AddEditEventSheet(existingEvent: event),
                                   );
                                 },
                                 color: theme.colorScheme.primary,
@@ -382,25 +413,33 @@ class RampCalendarEventCard extends ConsumerWidget {
                                     context: context,
                                     builder: (dialogCtx) => AlertDialog(
                                       title: const Text('Delete Event'),
-                                      content: Text('Are you sure you want to delete "${event.title}"?'),
+                                      content: Text(
+                                          'Are you sure you want to delete "${event.title}"?'),
                                       actions: [
                                         TextButton(
-                                          onPressed: () => Navigator.pop(dialogCtx, false),
+                                          onPressed: () =>
+                                              Navigator.pop(dialogCtx, false),
                                           child: const Text('CANCEL'),
                                         ),
                                         FilledButton(
-                                          onPressed: () => Navigator.pop(dialogCtx, true),
-                                          style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                                          onPressed: () =>
+                                              Navigator.pop(dialogCtx, true),
+                                          style: FilledButton.styleFrom(
+                                              backgroundColor: Colors.red),
                                           child: const Text('DELETE'),
                                         ),
                                       ],
                                     ),
                                   );
                                   if (confirm == true) {
-                                    ref.read(eventProvider.notifier).deleteEvent(event.id);
+                                    ref
+                                        .read(eventProvider.notifier)
+                                        .deleteEvent(event.id);
                                     if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Event deleted.')),
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text('Event deleted.')),
                                       );
                                     }
                                   }

@@ -24,7 +24,8 @@ class AuditLogEntry {
       };
 
   factory AuditLogEntry.fromMap(Map<String, dynamic> map) => AuditLogEntry(
-        id: map['id'] as String? ?? 'audit_${DateTime.now().millisecondsSinceEpoch}',
+        id: map['id'] as String? ??
+            'audit_${DateTime.now().millisecondsSinceEpoch}',
         action: map['action'] as String? ?? 'System Action',
         details: map['details'] as String? ?? '',
         timestamp: map['timestamp'] != null
@@ -43,7 +44,8 @@ class AuditService extends StateNotifier<List<AuditLogEntry>> {
       final res = await SupabaseService().loadTable('audit_logs');
       final logsData = res.dataOrNull ?? [];
       if (logsData.isNotEmpty) {
-        final logs = logsData.map((data) => AuditLogEntry.fromMap(data)).toList();
+        final logs =
+            logsData.map((data) => AuditLogEntry.fromMap(data)).toList();
         logs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
         state = logs;
       }
@@ -60,7 +62,8 @@ class AuditService extends StateNotifier<List<AuditLogEntry>> {
       timestamp: DateTime.now(),
     );
     state = [entry, ...state];
-    PersistenceQueue.instance.enqueueUpsert('audit_logs', entry.id, entry.toMap());
+    PersistenceQueue.instance
+        .enqueueUpsert('audit_logs', entry.id, entry.toMap());
   }
 }
 

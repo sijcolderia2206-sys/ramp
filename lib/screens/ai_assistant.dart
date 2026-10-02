@@ -264,7 +264,8 @@ class _AiAssistantBottomSheetState
   }
 
   Future<String> _getAiOrGeneralAnswer(String userQuery) async {
-    const String apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+    const String apiKey =
+        String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
 
     final tenants = ref.read(tenantProvider);
     final units = ref.read(unitProvider);
@@ -369,13 +370,6 @@ Provide a helpful, precise, and friendly answer for the landlord based on the co
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 16,
-            spreadRadius: 4,
-          ),
-        ],
       ),
       child: Column(
         children: [
@@ -395,20 +389,13 @@ Provide a helpful, precise, and friendly answer for the landlord based on the co
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
                       colors: [Color(0xFF0D6EFD), Color(0xFF3B82F6)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF0D6EFD).withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
                   ),
                   child: const Icon(Icons.auto_awesome,
                       color: Colors.white, size: 22),

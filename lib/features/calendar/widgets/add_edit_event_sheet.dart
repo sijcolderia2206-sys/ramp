@@ -104,10 +104,12 @@ class _AddEditEventSheetState extends ConsumerState<AddEditEventSheet> {
     );
 
     final isEdit = widget.existingEvent != null;
-    final eventId = widget.existingEvent?.id ?? 'evt_${DateTime.now().millisecondsSinceEpoch}';
+    final eventId = widget.existingEvent?.id ??
+        'evt_${DateTime.now().millisecondsSinceEpoch}';
 
     final units = ref.read(unitProvider);
-    final selectedUnit = units.where((u) => u.id == _selectedUnitId).firstOrNull;
+    final selectedUnit =
+        units.where((u) => u.id == _selectedUnitId).firstOrNull;
 
     final newEvent = AppEvent(
       id: eventId,
@@ -139,7 +141,9 @@ class _AddEditEventSheetState extends ConsumerState<AddEditEventSheet> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(isEdit ? 'Event updated successfully.' : 'Event scheduled successfully.'),
+        content: Text(isEdit
+            ? 'Event updated successfully.'
+            : 'Event scheduled successfully.'),
       ),
     );
   }
@@ -172,7 +176,9 @@ class _AddEditEventSheetState extends ConsumerState<AddEditEventSheet> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF34383C) : const Color(0xFFCBD5E1),
+                      color: isDark
+                          ? const Color(0xFF34383C)
+                          : const Color(0xFFCBD5E1),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -184,7 +190,9 @@ class _AddEditEventSheetState extends ConsumerState<AddEditEventSheet> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      widget.existingEvent != null ? 'Edit Schedule Event' : 'Schedule New Event',
+                      widget.existingEvent != null
+                          ? 'Edit Schedule Event'
+                          : 'Schedule New Event',
                       style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -193,7 +201,8 @@ class _AddEditEventSheetState extends ConsumerState<AddEditEventSheet> {
                     ),
                     Container(
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                        color: theme.colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.5),
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
@@ -209,24 +218,31 @@ class _AddEditEventSheetState extends ConsumerState<AddEditEventSheet> {
                 // Event Title
                 TextFormField(
                   controller: _titleController,
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14),
+                  style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600, fontSize: 14),
                   decoration: InputDecoration(
                     labelText: 'Event Title *',
                     hintText: 'e.g., Unit 101 Disinfection',
                     filled: true,
-                    fillColor: isDark ? const Color(0xFF1E2022) : const Color(0xFFF8F9FA),
+                    fillColor: isDark
+                        ? const Color(0xFF1E2022)
+                        : const Color(0xFFF8F9FA),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+                      borderSide: BorderSide(
+                          color: theme.colorScheme.primary, width: 1.5),
                     ),
-                    prefixIcon: Icon(Icons.edit_note_rounded, color: theme.colorScheme.primary),
+                    prefixIcon: Icon(Icons.edit_note_rounded,
+                        color: theme.colorScheme.primary),
                   ),
                   validator: (val) {
-                    if (val == null || val.trim().isEmpty) return 'Please enter event title';
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Please enter event title';
+                    }
                     return null;
                   },
                 ),
@@ -235,20 +251,25 @@ class _AddEditEventSheetState extends ConsumerState<AddEditEventSheet> {
                 // Event Type Dropdown
                 DropdownButtonFormField<String>(
                   initialValue: _selectedType,
-                  style: GoogleFonts.poppins(fontSize: 14, color: theme.colorScheme.onSurface),
+                  style: GoogleFonts.poppins(
+                      fontSize: 14, color: theme.colorScheme.onSurface),
                   decoration: InputDecoration(
                     labelText: 'Event Category',
                     filled: true,
-                    fillColor: isDark ? const Color(0xFF1E2022) : const Color(0xFFF8F9FA),
+                    fillColor: isDark
+                        ? const Color(0xFF1E2022)
+                        : const Color(0xFFF8F9FA),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+                      borderSide: BorderSide(
+                          color: theme.colorScheme.primary, width: 1.5),
                     ),
-                    prefixIcon: Icon(Icons.category_rounded, color: theme.colorScheme.primary),
+                    prefixIcon: Icon(Icons.category_rounded,
+                        color: theme.colorScheme.primary),
                   ),
                   icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   items: _eventTypes.map((type) {
@@ -274,16 +295,20 @@ class _AddEditEventSheetState extends ConsumerState<AddEditEventSheet> {
                           decoration: InputDecoration(
                             labelText: 'Date',
                             filled: true,
-                            fillColor: isDark ? const Color(0xFF1E2022) : const Color(0xFFF8F9FA),
+                            fillColor: isDark
+                                ? const Color(0xFF1E2022)
+                                : const Color(0xFFF8F9FA),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
                               borderSide: BorderSide.none,
                             ),
-                            prefixIcon: Icon(Icons.calendar_month_rounded, color: theme.colorScheme.primary),
+                            prefixIcon: Icon(Icons.calendar_month_rounded,
+                                color: theme.colorScheme.primary),
                           ),
                           child: Text(
                             DateFormat('MMM d, yyyy').format(_selectedDate),
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
+                            style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w600, fontSize: 13),
                           ),
                         ),
                       ),
@@ -297,16 +322,20 @@ class _AddEditEventSheetState extends ConsumerState<AddEditEventSheet> {
                           decoration: InputDecoration(
                             labelText: 'Time',
                             filled: true,
-                            fillColor: isDark ? const Color(0xFF1E2022) : const Color(0xFFF8F9FA),
+                            fillColor: isDark
+                                ? const Color(0xFF1E2022)
+                                : const Color(0xFFF8F9FA),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
                               borderSide: BorderSide.none,
                             ),
-                            prefixIcon: Icon(Icons.access_time_rounded, color: theme.colorScheme.primary),
+                            prefixIcon: Icon(Icons.access_time_rounded,
+                                color: theme.colorScheme.primary),
                           ),
                           child: Text(
                             _selectedTime.format(context),
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
+                            style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w600, fontSize: 13),
                           ),
                         ),
                       ),
@@ -318,22 +347,28 @@ class _AddEditEventSheetState extends ConsumerState<AddEditEventSheet> {
                 // Priority Selection
                 DropdownButtonFormField<String>(
                   initialValue: _selectedPriority,
-                  style: GoogleFonts.poppins(fontSize: 14, color: theme.colorScheme.onSurface),
+                  style: GoogleFonts.poppins(
+                      fontSize: 14, color: theme.colorScheme.onSurface),
                   decoration: InputDecoration(
                     labelText: 'Priority Level',
                     filled: true,
-                    fillColor: isDark ? const Color(0xFF1E2022) : const Color(0xFFF8F9FA),
+                    fillColor: isDark
+                        ? const Color(0xFF1E2022)
+                        : const Color(0xFFF8F9FA),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
                     ),
-                    prefixIcon: Icon(Icons.flag_rounded, color: theme.colorScheme.primary),
+                    prefixIcon: Icon(Icons.flag_rounded,
+                        color: theme.colorScheme.primary),
                   ),
                   icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   items: const [
                     DropdownMenuItem(value: 'low', child: Text('Low Priority')),
-                    DropdownMenuItem(value: 'medium', child: Text('Medium Priority')),
-                    DropdownMenuItem(value: 'high', child: Text('High Priority')),
+                    DropdownMenuItem(
+                        value: 'medium', child: Text('Medium Priority')),
+                    DropdownMenuItem(
+                        value: 'high', child: Text('High Priority')),
                     DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
                   ],
                   onChanged: (val) {
@@ -345,16 +380,20 @@ class _AddEditEventSheetState extends ConsumerState<AddEditEventSheet> {
                 // Optional Unit Selector
                 DropdownButtonFormField<String?>(
                   initialValue: _selectedUnitId,
-                  style: GoogleFonts.poppins(fontSize: 14, color: theme.colorScheme.onSurface),
+                  style: GoogleFonts.poppins(
+                      fontSize: 14, color: theme.colorScheme.onSurface),
                   decoration: InputDecoration(
                     labelText: 'Associated Unit (Optional)',
                     filled: true,
-                    fillColor: isDark ? const Color(0xFF1E2022) : const Color(0xFFF8F9FA),
+                    fillColor: isDark
+                        ? const Color(0xFF1E2022)
+                        : const Color(0xFFF8F9FA),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
                     ),
-                    prefixIcon: Icon(Icons.apartment_rounded, color: theme.colorScheme.primary),
+                    prefixIcon: Icon(Icons.apartment_rounded,
+                        color: theme.colorScheme.primary),
                   ),
                   icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   items: [
@@ -376,16 +415,20 @@ class _AddEditEventSheetState extends ConsumerState<AddEditEventSheet> {
                 // Optional Tenant Selector
                 DropdownButtonFormField<String?>(
                   initialValue: _selectedTenantId,
-                  style: GoogleFonts.poppins(fontSize: 14, color: theme.colorScheme.onSurface),
+                  style: GoogleFonts.poppins(
+                      fontSize: 14, color: theme.colorScheme.onSurface),
                   decoration: InputDecoration(
                     labelText: 'Associated Tenant (Optional)',
                     filled: true,
-                    fillColor: isDark ? const Color(0xFF1E2022) : const Color(0xFFF8F9FA),
+                    fillColor: isDark
+                        ? const Color(0xFF1E2022)
+                        : const Color(0xFFF8F9FA),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
                     ),
-                    prefixIcon: Icon(Icons.person_outline_rounded, color: theme.colorScheme.primary),
+                    prefixIcon: Icon(Icons.person_outline_rounded,
+                        color: theme.colorScheme.primary),
                   ),
                   icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   items: [
@@ -393,10 +436,12 @@ class _AddEditEventSheetState extends ConsumerState<AddEditEventSheet> {
                       value: null,
                       child: Text('None'),
                     ),
-                    ...tenants.where((t) => !t.isArchived).map((t) => DropdownMenuItem<String?>(
-                          value: t.id,
-                          child: Text('${t.name} (${t.unitNumber})'),
-                        )),
+                    ...tenants
+                        .where((t) => !t.isArchived)
+                        .map((t) => DropdownMenuItem<String?>(
+                              value: t.id,
+                              child: Text('${t.name} (${t.unitNumber})'),
+                            )),
                   ],
                   onChanged: (val) {
                     setState(() => _selectedTenantId = val);
@@ -408,19 +453,24 @@ class _AddEditEventSheetState extends ConsumerState<AddEditEventSheet> {
                 TextFormField(
                   controller: _descController,
                   maxLines: 3,
-                  style: GoogleFonts.poppins(fontSize: 14, color: theme.colorScheme.onSurface),
+                  style: GoogleFonts.poppins(
+                      fontSize: 14, color: theme.colorScheme.onSurface),
                   decoration: InputDecoration(
                     labelText: 'Description & Notes (Optional)',
-                    hintText: 'Add details, contact instructions, or access codes...',
+                    hintText:
+                        'Add details, contact instructions, or access codes...',
                     filled: true,
-                    fillColor: isDark ? const Color(0xFF1E2022) : const Color(0xFFF8F9FA),
+                    fillColor: isDark
+                        ? const Color(0xFF1E2022)
+                        : const Color(0xFFF8F9FA),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+                      borderSide: BorderSide(
+                          color: theme.colorScheme.primary, width: 1.5),
                     ),
                     alignLabelWithHint: true,
                   ),
@@ -434,11 +484,14 @@ class _AddEditEventSheetState extends ConsumerState<AddEditEventSheet> {
                   child: FilledButton(
                     onPressed: _saveEvent,
                     style: FilledButton.styleFrom(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
                       elevation: 0,
                     ),
                     child: Text(
-                      widget.existingEvent != null ? 'SAVE CHANGES' : 'SCHEDULE EVENT',
+                      widget.existingEvent != null
+                          ? 'SAVE CHANGES'
+                          : 'SCHEDULE EVENT',
                       style: GoogleFonts.poppins(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,

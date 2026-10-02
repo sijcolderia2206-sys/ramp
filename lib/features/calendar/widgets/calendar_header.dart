@@ -50,7 +50,8 @@ class CalendarHeaderWidget extends ConsumerWidget {
                     onTap: onTodayPressed,
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
@@ -86,11 +87,11 @@ class CalendarHeaderWidget extends ConsumerWidget {
                 showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
-                  backgroundColor: isDark
-                      ? theme.colorScheme.surface
-                      : Colors.white,
+                  backgroundColor:
+                      isDark ? theme.colorScheme.surface : Colors.white,
                   shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(24)),
                   ),
                   builder: (_) => const AddEditEventSheet(),
                 );
@@ -98,7 +99,8 @@ class CalendarHeaderWidget extends ConsumerWidget {
               style: FilledButton.styleFrom(
                 elevation: 0,
                 backgroundColor: theme.colorScheme.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -134,21 +136,24 @@ class CalendarHeaderWidget extends ConsumerWidget {
                 child: _FormatSegmentButton(
                   label: 'Month',
                   isSelected: currentFormat == CalendarFormat.month,
-                  onTap: () => ref.read(calendarFormatProvider.notifier).state = CalendarFormat.month,
+                  onTap: () => ref.read(calendarFormatProvider.notifier).state =
+                      CalendarFormat.month,
                 ),
               ),
               Expanded(
                 child: _FormatSegmentButton(
                   label: '2 Weeks',
                   isSelected: currentFormat == CalendarFormat.twoWeeks,
-                  onTap: () => ref.read(calendarFormatProvider.notifier).state = CalendarFormat.twoWeeks,
+                  onTap: () => ref.read(calendarFormatProvider.notifier).state =
+                      CalendarFormat.twoWeeks,
                 ),
               ),
               Expanded(
                 child: _FormatSegmentButton(
                   label: 'Week',
                   isSelected: currentFormat == CalendarFormat.week,
-                  onTap: () => ref.read(calendarFormatProvider.notifier).state = CalendarFormat.week,
+                  onTap: () => ref.read(calendarFormatProvider.notifier).state =
+                      CalendarFormat.week,
                 ),
               ),
             ],
@@ -174,7 +179,7 @@ class _FormatSegmentButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -183,19 +188,11 @@ class _FormatSegmentButton extends StatelessWidget {
         curve: Curves.easeInOut,
         margin: const EdgeInsets.all(3),
         decoration: BoxDecoration(
-          color: isSelected 
+          color: isSelected
               ? (isDark ? const Color(0xFF34383C) : Colors.white)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(9),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  )
-                ]
-              : [],
+          boxShadow: null,
         ),
         alignment: Alignment.center,
         child: Text(

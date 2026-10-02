@@ -294,7 +294,8 @@ class _LandlordProfileEditScreenState extends State<LandlordProfileEditScreen> {
                               : const Icon(Icons.check_rounded),
                           label: FittedBox(
                             fit: BoxFit.scaleDown,
-                            child: Text(_isSaving ? 'SAVING...' : 'SAVE CHANGES'),
+                            child:
+                                Text(_isSaving ? 'SAVING...' : 'SAVE CHANGES'),
                           ),
                         ),
                       ),

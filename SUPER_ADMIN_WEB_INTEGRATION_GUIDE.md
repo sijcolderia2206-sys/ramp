@@ -8,8 +8,8 @@ This document serves as the **master reference specification** for connecting a 
 
 ```
                                ┌────────────────────────────────────────┐
-                               │       SHARED FIREBASE CLOUD BACKEND    │
-                               │          Project ID: rampdb123         │
+                               │        SHARED BACKEND SERVICES        │
+                               │  Firebase Auth + Supabase PostgreSQL  │
                                └───────────────────┬────────────────────┘
                                                    │
                    ┌───────────────────────────────┴───────────────────────────────┐
@@ -19,26 +19,24 @@ This document serves as the **master reference specification** for connecting a 
 │       Framework: Flutter & Dart     │                         │       Framework: Next.js / React    │
 │       Target: Landlords & Tenants   │                         │       Target: Platform Super Admin  │
 ├─────────────────────────────────────┤                         ├─────────────────────────────────────┤
-│ - Manage owned units & tenants      │                         │ - Onboard & manage Landlord accounts│
-│ - Verify GCash/Maya payments        │                         │ - Suspend/activate Landlord access  │
-│ - Dispatch maintenance tickets      │                         │ - Track global platform revenue     │
-│ - View tenant balance countdowns    │                         │ - Stream real-time audit log feeds  │
-│ - Filtered by `landlordId`          │                         │ - System-wide global access         │
+│ - Auth: Firebase Authentication     │                         │ - Auth: Firebase Auth + User Roles  │
+│ - User Profiles: Firestore / Supabase│                        │ - Onboard & manage Landlord accounts│
+│ - DB: Supabase PostgreSQL           │                         │ - DB: Supabase JS Client            │
+│ - Storage: Supabase `ramp_media`    │                         │ - Track global metrics & audit logs │
 └─────────────────────────────────────┘                         └─────────────────────────────────────┘
 ```
 
 ---
 
-## 🔑 2. Firebase Configuration Details
+## 🔑 2. Backend Configuration Details
 
-Both the mobile application and the Super Admin Web App must connect to the **same Firebase project**.
+Both the mobile application and the Super Admin Web App connect to **Firebase Auth** for user session tokens and roles, and **Supabase** (`@supabase/supabase-js`) for operational database entities and media storage.
 
-### Firebase Web SDK Config Reference (`firebase.config.js` or `firebase.config.ts`):
+### A. Firebase Web SDK Reference (`firebase.config.ts`):
 ```typescript
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSy...",                   // Extracted from Firebase Console / google-services.json
@@ -52,12 +50,21 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const storage = getStorage(app);
+```
+
+### B. Supabase Web SDK Reference (`supabase.config.ts`):
+```typescript
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = 'https://zjkkuxuofkkysvbmmeqy.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1...';
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 ```
 
 ---
 
-## 🗄️ 3. Master Firestore Schemas & Data Contracts
+## 🗄️ 3. Master Schemas & Data Contracts (Supabase PostgreSQL)
 
 All entities created by Landlords on the mobile app include a `landlordId` field for data partitioning. The Super Admin web app uses this field to group or inspect data per landlord.
 

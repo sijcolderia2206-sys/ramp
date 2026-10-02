@@ -6,31 +6,46 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isLandlord() {
-      return isAuthenticated();
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isLandlordOrAdmin() {
+      return isAuthenticated() &&
+        (getUserData().role == 'landlord' || getUserData().role == 'superAdmin');
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && (request.auth.uid == userId || isLandlordOrAdmin());
+      allow delete: if isLandlordOrAdmin();
     }
 
     // Units Collection
     match /units/{unitId} {
-      allow read: if true;
-      allow write: if isLandlord();
+      allow read: if isAuthenticated();
+      allow write: if isLandlordOrAdmin();
     }
 
     // Tenants Collection
     match /tenants/{tenantId} {
-      allow read, write: if isLandlord();
+      allow read: if isAuthenticated();
+      allow write: if isLandlordOrAdmin();
     }
 
     // Payments Collection
     match /payments/{paymentId} {
-      allow read: if true;
-      allow write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isLandlordOrAdmin();
     }
 
     // Maintenance Tickets Collection
     match /maintenanceTickets/{ticketId} {
-      allow read, create: if true;
-      allow update, delete: if isLandlord();
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isLandlordOrAdmin();
     }
 
     // Audit Logs Collection (Immutable Circular Buffer)
@@ -41,42 +56,37 @@ service cloud.firestore {
 
     // Settings Collection
     match /settings/{settingId} {
-      allow read: if true;
-      allow write: if isLandlord();
+      allow read: if isAuthenticated();
+      allow write: if isLandlordOrAdmin();
     }
 
     // Announcements Collection
     match /announcements/{announcementId} {
-      allow read: if true;
-      allow write: if isLandlord();
+      allow read: if isAuthenticated();
+      allow write: if isLandlordOrAdmin();
     }
 
     // Notifications Collection
     match /notifications/{notificationId} {
       allow read: if isAuthenticated();
-      allow write: if isLandlord();
+      allow write: if isLandlordOrAdmin();
     }
 
     // Expenses Collection
     match /expenses/{expenseId} {
-      allow read, write: if isLandlord();
+      allow read, write: if isLandlordOrAdmin();
     }
 
     // Tenant Documents Collection
     match /tenantDocuments/{documentId} {
       allow read: if isAuthenticated();
-      allow write: if isLandlord();
+      allow write: if isLandlordOrAdmin();
     }
 
     // Utility Rate Logs Collection
     match /utilityRateLogs/{logId} {
       allow read: if isAuthenticated();
-      allow write: if isLandlord();
-    }
-
-    // Default catch-all rule
-    match /{document=**} {
-      allow read, write: if isLandlord();
+      allow write: if isLandlordOrAdmin();
     }
   }
 }

@@ -7,7 +7,8 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDarkMode = ref.watch(darkModeProvider);
+    final themeMode = ref.watch(themeModeProvider);
+    final isDarkMode = themeMode == ThemeMode.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -21,6 +22,8 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('Toggle app appearance theme'),
             value: isDarkMode,
             onChanged: (val) {
+              ref.read(themeModeProvider.notifier).state =
+                  val ? ThemeMode.dark : ThemeMode.light;
               ref.read(darkModeProvider.notifier).state = val;
             },
           ),
@@ -33,7 +36,8 @@ class SettingsScreen extends ConsumerWidget {
           const Divider(),
           ListTile(
             title: const Text('About RAMP'),
-            subtitle: const Text('Rental Administration Management Platform v1.0.0'),
+            subtitle:
+                const Text('Rental Administration Management Platform v1.0.0'),
             trailing: const Icon(Icons.info_outline_rounded),
             onTap: () {},
           ),

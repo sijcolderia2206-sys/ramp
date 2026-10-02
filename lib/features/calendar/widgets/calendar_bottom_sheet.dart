@@ -7,7 +7,8 @@ void showRampCalendarBottomSheet(BuildContext context) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
+    backgroundColor:
+        isDark ? Theme.of(context).colorScheme.surface : Colors.white,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),

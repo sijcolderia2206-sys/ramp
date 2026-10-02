@@ -615,7 +615,7 @@ class _UnitDetailScreenState extends ConsumerState<UnitDetailScreen> {
                               .read(tenantProvider.notifier)
                               .updateTenant(tObj.copyWith(
                                 unitId: unit.id,
-                                unitNumber: unit.unitNumber,
+                                unitNumber: unit.unitNumber ?? 'Unknown Unit',
                                 monthlyRent: unit.monthlyRent,
                                 status: 'Active',
                               ));
@@ -666,7 +666,7 @@ class _UnitDetailScreenState extends ConsumerState<UnitDetailScreen> {
     // Auto-update logic
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (unit.isOccupied && tenant != null) {
-        if (DateTime.now().isAfter(tenant.leaseEnd)) {
+        if (DateTime.now().isAfter(tenant.effectiveLeaseEnd)) {
           if (waitlistTenant != null) {
             if (unit.status != 'Pending') {
               ref.read(unitProvider.notifier).updateUnit(unit.copyWith(status: 'Pending'));
@@ -681,8 +681,8 @@ class _UnitDetailScreenState extends ConsumerState<UnitDetailScreen> {
     });
 
     final isLeaseEndingSoon = tenant != null && 
-        tenant.leaseEnd.difference(DateTime.now()).inDays <= 30 && 
-        tenant.leaseEnd.difference(DateTime.now()).inDays >= 0;
+        tenant.effectiveLeaseEnd.difference(DateTime.now()).inDays <= 30 && 
+        tenant.effectiveLeaseEnd.difference(DateTime.now()).inDays >= 0;
 
     final unitLedger =
         ref.watch(paymentProvider).where((p) => p.unitId == unit.id).toList();
@@ -758,7 +758,7 @@ class _UnitDetailScreenState extends ConsumerState<UnitDetailScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(18),
                   child: Image.network(
-                    unit.imageUrl,
+                    unit.imageUrl ?? '',
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Container(
                       color: Colors.grey[300],
@@ -775,7 +775,7 @@ class _UnitDetailScreenState extends ConsumerState<UnitDetailScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    unit.unitNumber,
+                    unit.unitNumber ?? 'Unit 1',
                     style: GoogleFonts.poppins(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -865,7 +865,7 @@ class _UnitDetailScreenState extends ConsumerState<UnitDetailScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Reminder: Lease ends in ${tenant.leaseEnd.difference(DateTime.now()).inDays} days (${DateFormat('MMM dd, yyyy').format(tenant.leaseEnd)}).',
+                          'Reminder: Lease ends in ${tenant.effectiveLeaseEnd.difference(DateTime.now()).inDays} days (${DateFormat('MMM dd, yyyy').format(tenant.effectiveLeaseEnd)}).',
                           style: GoogleFonts.poppins(
                             fontSize: 13,
                             color: isDark ? Colors.orange[200] : Colors.orange[800],
@@ -888,7 +888,7 @@ class _UnitDetailScreenState extends ConsumerState<UnitDetailScreen> {
                     if (tenant != null)
                       CompactInfoItem(
                         label: 'Lease Start',
-                        value: DateFormat('MMM dd, yyyy').format(tenant.leaseStart),
+                        value: DateFormat('MMM dd, yyyy').format(tenant.effectiveLeaseStart),
                         icon: Icons.date_range_rounded,
                       ),
                   ],
@@ -1198,8 +1198,8 @@ class _UnitDetailScreenState extends ConsumerState<UnitDetailScreen> {
                               ),
                               subtitle: Text(
                                 p.isMaintenance
-                                    ? '${p.remarks ?? 'Repair estimate'}\nTicket: ${p.ticketId ?? 'Unlinked'} • ${DateFormat('MMM dd, yyyy').format(p.paymentDate)}'
-                                    : 'Ref: ${p.referenceNumber} • ${DateFormat('MMM dd, yyyy').format(p.paymentDate)}',
+                                    ? '${p.remarks ?? 'Repair estimate'}\nTicket: ${p.ticketId ?? 'Unlinked'} • ${DateFormat('MMM dd, yyyy').format(p.effectivePaymentDate)}'
+                                    : 'Ref: ${p.referenceNumber} • ${DateFormat('MMM dd, yyyy').format(p.effectivePaymentDate)}',
                                 style: GoogleFonts.poppins(
                                   fontSize: 11,
                                   color: isDark

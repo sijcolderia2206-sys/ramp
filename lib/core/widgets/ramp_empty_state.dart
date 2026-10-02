@@ -42,8 +42,8 @@ class RampEmptyState extends StatelessWidget {
   }) {
     return RampEmptyState(
       icon: Icons.search_off_rounded,
-      iconColor: const Color(0xFF0D6EFD),
-      iconBackgroundColor: const Color(0xFFE8F1FF),
+      iconColor: RampColors.primary,
+      iconBackgroundColor: RampColors.softBlueTint,
       title: 'No Matching Results',
       description: query.isNotEmpty
           ? 'No items matched "$query". Try searching for something else or clear filters.'
@@ -111,13 +111,7 @@ class RampEmptyState extends StatelessWidget {
                   color: primaryColor.withValues(alpha: 0.25),
                   width: 2.0,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: primaryColor.withValues(alpha: isDark ? 0.3 : 0.15),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+                boxShadow: null,
               ),
               child: Icon(
                 icon,

@@ -869,6 +869,8 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                           activeTrackColor: accent,
                           onChanged: (val) {
                             HapticFeedback.lightImpact();
+                            ref.read(themeModeProvider.notifier).state =
+                                val ? ThemeMode.dark : ThemeMode.light;
                             ref.read(darkModeProvider.notifier).state = val;
                             persistAppSettings(darkMode: val);
                           },
@@ -961,42 +963,6 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                   ),
 
                   const SizedBox(height: 28),
-
-                  // SWITCH TO TENANT PORTAL BUTTON
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: RampColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14)),
-                      ),
-                      icon: const Icon(Icons.person_pin_rounded),
-                      label: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          'SWITCH TO TENANT PORTAL VIEW',
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                      onPressed: () {
-                        ref.read(rampProvider.notifier).setRole('tenant');
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Switched to Tenant Portal view'),
-                            backgroundColor: RampColors.primary,
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 14),
 
                   // LOGOUT BUTTON (REQUIREMENTS: [Logout Icon])
                   SizedBox(

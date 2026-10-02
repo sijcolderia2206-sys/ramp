@@ -10,6 +10,7 @@ class ClayContainer extends StatefulWidget {
   final double? width;
   final double? height;
   final Color? color;
+  final Gradient? gradient;
   final double borderRadius;
   final double depth; // Kept for API compatibility, but ignored in UI
   final double spread; // Kept for API compatibility, but ignored in UI
@@ -28,6 +29,7 @@ class ClayContainer extends StatefulWidget {
     this.width,
     this.height,
     this.color,
+    this.gradient,
     this.borderRadius = 20.0,
     this.depth = 8.0,
     this.spread = 0.0,
@@ -93,8 +95,8 @@ class _ClayContainerState extends State<ClayContainer>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final baseColor = widget.color ??
-        (isDark ? theme.colorScheme.surface : Colors.white);
+    final baseColor =
+        widget.color ?? (isDark ? theme.colorScheme.surface : Colors.white);
 
     return AnimatedBuilder(
       animation: _pressAnimation,
@@ -106,11 +108,11 @@ class _ClayContainerState extends State<ClayContainer>
           width: widget.width,
           height: widget.height,
           margin: widget.margin,
-          padding: widget.padding,
           alignment: widget.alignment,
           clipBehavior: widget.clipBehavior,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(widget.borderRadius),
+            gradient: widget.gradient,
             border: widget.border ??
                 Border.all(
                   color: isDark
@@ -118,11 +120,14 @@ class _ClayContainerState extends State<ClayContainer>
                       : Colors.black.withValues(alpha: 0.05),
                   width: 1.0,
                 ),
+            boxShadow: null,
           ),
           child: Material(
-            color: baseColor,
+            color: widget.gradient != null ? Colors.transparent : baseColor,
             borderRadius: BorderRadius.circular(widget.borderRadius),
-            clipBehavior: widget.clipBehavior == Clip.none ? Clip.antiAlias : widget.clipBehavior,
+            clipBehavior: widget.clipBehavior == Clip.none
+                ? Clip.antiAlias
+                : widget.clipBehavior,
             child: widget.padding != null || widget.alignment != null
                 ? Container(
                     padding: widget.padding,

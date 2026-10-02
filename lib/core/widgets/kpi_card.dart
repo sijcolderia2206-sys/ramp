@@ -1,6 +1,7 @@
 // lib/core/widgets/kpi_card.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../theme/ramp_theme.dart';
 import 'clay_container.dart';
 
 /// Modern flat minimal KPI Card component for RAMP Dashboard.
@@ -22,8 +23,8 @@ class KpiCard extends StatelessWidget {
     required this.value,
     this.subtitle,
     required this.icon,
-    this.iconColor = const Color(0xFF0D6EFD),
-    this.iconBackgroundColor = const Color(0xFFE8F1FF),
+    this.iconColor = RampColors.primary,
+    this.iconBackgroundColor = RampColors.softBlueTint,
     this.onTap,
     this.backgroundColor = Colors.white,
   });
@@ -44,7 +45,8 @@ class KpiCard extends StatelessWidget {
       depth: 6.0,
       onTap: onTap,
       padding: const EdgeInsets.all(16.0),
-      child: Column( crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
@@ -79,7 +81,7 @@ class KpiCard extends StatelessWidget {
               Text(
                 title,
                 style: GoogleFonts.poppins(
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w500,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),

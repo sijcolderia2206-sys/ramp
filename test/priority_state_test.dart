@@ -105,7 +105,7 @@ void main() {
     expect(unit.utilityBill(waterRate: 45, electricityRate: 12), 156);
 
     final usingMaster = unit.copyWith(
-      clearWaterRateOverride: true,
+      waterRateOverride: null,
       electricityUtilityEnabled: true,
     );
     expect(usingMaster.effectiveWaterRate(48), 48);

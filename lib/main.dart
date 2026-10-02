@@ -13,12 +13,20 @@ import 'core/widgets/core_widgets.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await SupabaseConfig.initialize();
-  await SupabaseConfig.testConnection();
+  try {
+    await SupabaseConfig.initialize();
+    await SupabaseConfig.testConnection();
+  } catch (e) {
+    debugPrint('Supabase initialization exception: $e');
+  }
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase initialization exception: $e');
+  }
 
   runApp(const ProviderScope(child: RampApp()));
 }
@@ -50,13 +58,14 @@ class _RampAppState extends ConsumerState<RampApp> {
         ref.read(authProvider.notifier).state = user.uid;
         try {
           await hydratePersistentAppData(ref);
-        } on FirebaseException {
-          // Keep the authenticated session and use the available local state.
+        } catch (e) {
+          debugPrint('Hydrate persistent app data exception: $e');
         }
       } else {
         ref.read(authProvider.notifier).state = null;
       }
-    } on FirebaseAuthException {
+    } catch (e) {
+      debugPrint('Auth restore session exception: $e');
       ref.read(authProvider.notifier).state = null;
     } finally {
       if (mounted) setState(() => _isRestoringSession = false);
@@ -66,17 +75,21 @@ class _RampAppState extends ConsumerState<RampApp> {
   @override
   Widget build(BuildContext context) {
     final isAuthenticated = ref.watch(authProvider) != null;
-    final isDarkMode = ref.watch(darkModeProvider);
-    final currentRole = ref.watch(currentRoleProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     Widget homeWidget;
     if (_isRestoringSession) {
       homeWidget = const _SessionRestoreScreen();
     } else if (isAuthenticated) {
-      if (currentRole == 'tenant') {
-        homeWidget = const TenantPortalScreen();
-      } else {
-        homeWidget = const LandlordShell();
+      final roleEnum = ref.watch(userRoleEnumProvider);
+      switch (roleEnum) {
+        case UserRole.superAdmin:
+        case UserRole.landlord:
+          homeWidget = const LandlordShell();
+          break;
+        case UserRole.tenant:
+          homeWidget = const TenantPortalScreen();
+          break;
       }
     } else {
       homeWidget = const LoginScreen();
@@ -87,7 +100,18 @@ class _RampAppState extends ConsumerState<RampApp> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
+      themeMode: themeMode,
+      builder: (context, child) {
+        final isDark = themeMode == ThemeMode.dark ||
+            (themeMode == ThemeMode.system &&
+                MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+        return AnimatedTheme(
+          data: isDark ? AppTheme.darkTheme : AppTheme.lightTheme,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: homeWidget,
     );
   }
@@ -162,14 +186,6 @@ class LandlordShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(bottomNavIndexProvider);
 
-    final items = const [
-      _NavItem(icon: Icons.home_rounded, label: 'Home'),
-      _NavItem(icon: Icons.apartment_rounded, label: 'Units'),
-      _NavItem(icon: Icons.people_alt_rounded, label: 'Tenants'),
-      _NavItem(icon: Icons.build_rounded, label: 'Repairs'),
-      _NavItem(icon: Icons.person_rounded, label: 'Profile'),
-    ];
-
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
@@ -184,7 +200,8 @@ class LandlordShell extends ConsumerWidget {
           context: context,
           builder: (dialogContext) => AlertDialog(
             title: const Text('Exit RAMP App?'),
-            content: const Text('Are you sure you want to exit the application?'),
+            content:
+                const Text('Are you sure you want to exit the application?'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext, false),
@@ -204,141 +221,75 @@ class LandlordShell extends ConsumerWidget {
       },
       child: SafeArea(
         child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        resizeToAvoidBottomInset: false,
-        body: Column(
-          children: [
-            const OfflineSyncBanner(),
-            Expanded(
-              child: IndexedStack(
-                index: currentIndex,
-                children: _screens,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          resizeToAvoidBottomInset: false,
+          body: Column(
+            children: [
+              const OfflineSyncBanner(),
+              Expanded(
+                child: IndexedStack(
+                  index: currentIndex,
+                  children: _screens,
+                ),
               ),
-            ),
-          ],
-        ),
-        bottomNavigationBar: _FloatingPillBottomBar(
-          currentIndex: currentIndex,
-          items: items,
-          onTap: (index) {
-            HapticFeedback.selectionClick();
-            ref.read(bottomNavIndexProvider.notifier).state = index;
-          },
-        ),
-      ),
-    ),
-  );
-  }
-}
-
-class _NavItem {
-  final IconData icon;
-  final String label;
-
-  const _NavItem({required this.icon, required this.label});
-}
-
-class _FloatingPillBottomBar extends StatelessWidget {
-  final int currentIndex;
-  final List<_NavItem> items;
-  final ValueChanged<int> onTap;
-
-  const _FloatingPillBottomBar({
-    required this.currentIndex,
-    required this.items,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceBg = isDark
-        ? Theme.of(context).colorScheme.surface
-        : const Color(0xFFF1F5F9);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
-      child: ClayContainer(
-        height: 68,
-        color: surfaceBg,
-        borderRadius: 28,
-        depth: 8.0,
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(items.length, (index) {
-            final isSelected = currentIndex == index;
-            final item = items[index];
-
-            final selectedBg = Theme.of(context).colorScheme.primary;
-
-            return Expanded(
-              child: BounceNavTab(
-                isSelected: isSelected,
-                onTap: () => onTap(index),
-                child: isSelected
-                    ? ClayContainer(
-                        color: selectedBg,
-                        borderRadius: 20,
-                        depth: 5.0,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 2, vertical: 6),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              item.icon,
-                              size: 20,
-                              color: Theme.of(context).colorScheme.onPrimary,
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              item.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onPrimary,
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 2, vertical: 6),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              item.icon,
-                              size: 20,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              item.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+            ],
+          ),
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: currentIndex,
+            onDestinationSelected: (index) {
+              HapticFeedback.selectionClick();
+              ref.read(bottomNavIndexProvider.notifier).state = index;
+            },
+            elevation: 2,
+            height: 66,
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            indicatorColor: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF0284C7).withValues(alpha: 0.20)
+                : const Color(0xFFE0F2FE),
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: GradientIcon(
+                  icon: Icons.home_rounded,
+                  size: 24,
+                ),
+                label: 'Home',
               ),
-            );
-          }),
+              NavigationDestination(
+                icon: Icon(Icons.apartment_outlined),
+                selectedIcon: GradientIcon(
+                  icon: Icons.apartment_rounded,
+                  size: 24,
+                ),
+                label: 'Units',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.people_outline_rounded),
+                selectedIcon: GradientIcon(
+                  icon: Icons.people_rounded,
+                  size: 24,
+                ),
+                label: 'Tenants',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.build_outlined),
+                selectedIcon: GradientIcon(
+                  icon: Icons.build_rounded,
+                  size: 24,
+                ),
+                label: 'Repairs',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline_rounded),
+                selectedIcon: GradientIcon(
+                  icon: Icons.person_rounded,
+                  size: 24,
+                ),
+                label: 'Profile',
+              ),
+            ],
+          ),
         ),
       ),
     );

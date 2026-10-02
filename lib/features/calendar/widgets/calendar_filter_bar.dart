@@ -50,34 +50,33 @@ class CalendarFilterBarWidget extends ConsumerWidget {
         children: CalendarCategoryFilter.values.map((filter) {
           final isSelected = activeFilter == filter;
           final count = getCountForFilter(filter);
-          final filterColor = filter == CalendarCategoryFilter.all ? theme.colorScheme.primary : filter.color;
+          final filterColor = filter == CalendarCategoryFilter.all
+              ? theme.colorScheme.primary
+              : filter.color;
 
           return Padding(
             padding: const EdgeInsets.only(right: 10),
             child: GestureDetector(
-              onTap: () => ref.read(calendarFilterProvider.notifier).state = filter,
+              onTap: () =>
+                  ref.read(calendarFilterProvider.notifier).state = filter,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected 
-                      ? filterColor 
+                  color: isSelected
+                      ? filterColor
                       : (isDark ? const Color(0xFF1E2022) : Colors.white),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: isSelected ? filterColor : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                    color: isSelected
+                        ? filterColor
+                        : theme.colorScheme.outlineVariant
+                            .withValues(alpha: 0.3),
                     width: 1.5,
                   ),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: filterColor.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          )
-                        ]
-                      : [],
+                  boxShadow: null,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -92,7 +91,8 @@ class CalendarFilterBarWidget extends ConsumerWidget {
                       filter.label,
                       style: GoogleFonts.poppins(
                         fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w500,
                         color: isSelected
                             ? Colors.white
                             : theme.colorScheme.onSurface,
@@ -101,7 +101,8 @@ class CalendarFilterBarWidget extends ConsumerWidget {
                     if (count > 0) ...[
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? Colors.white.withValues(alpha: 0.25)

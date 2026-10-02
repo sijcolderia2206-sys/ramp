@@ -1,5 +1,6 @@
 // lib/core/services/routing_service.dart
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
@@ -63,9 +64,9 @@ class RoutingService {
     );
 
     try {
-      final response = await http
-          .get(url, headers: {'User-Agent': 'com.apex.ramp/1.0'})
-          .timeout(const Duration(seconds: 8));
+      final response = await http.get(url, headers: {
+        'User-Agent': 'com.apex.ramp/1.0'
+      }).timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -100,7 +101,7 @@ class RoutingService {
       }
     } catch (e) {
       // Gracefully fall back to straight line if network or OSRM is unreachable
-      print('RAMP RoutingService OSRM Error: $e');
+      debugPrint('RAMP RoutingService OSRM Error: $e');
     }
     return null;
   }

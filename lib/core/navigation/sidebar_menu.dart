@@ -41,7 +41,8 @@ class SidebarMenu extends ConsumerWidget {
                   color: RampColors.primary,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.apartment_rounded, color: Colors.white, size: 24),
+                child: const Icon(Icons.apartment_rounded,
+                    color: Colors.white, size: 24),
               ),
               const SizedBox(width: 12),
               Text(
@@ -66,7 +67,8 @@ class SidebarMenu extends ConsumerWidget {
                   onTap: () => onItemSelected(item.index),
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       color: isSelected
                           ? RampColors.primary.withValues(alpha: 0.12)
@@ -77,7 +79,9 @@ class SidebarMenu extends ConsumerWidget {
                       children: [
                         Icon(
                           item.icon,
-                          color: isSelected ? RampColors.primary : theme.iconTheme.color,
+                          color: isSelected
+                              ? RampColors.primary
+                              : theme.iconTheme.color,
                           size: 22,
                         ),
                         const SizedBox(width: 16),
@@ -87,7 +91,9 @@ class SidebarMenu extends ConsumerWidget {
                             color: isSelected
                                 ? RampColors.primary
                                 : theme.textTheme.bodyMedium?.color,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                         ),
                       ],

@@ -40,7 +40,8 @@ class SupabaseConfig {
   static Future<bool> testConnection() async {
     try {
       final response = client.auth.currentSession;
-      debugPrint('⚡ Supabase Connection OK! (Session: ${response != null ? "Active" : "None"})');
+      debugPrint(
+          '⚡ Supabase Connection OK! (Session: ${response != null ? "Active" : "None"})');
       return true;
     } catch (e) {
       debugPrint('❌ Supabase Connection Test Error: $e');

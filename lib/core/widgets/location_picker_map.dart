@@ -65,8 +65,8 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
   @override
   void initState() {
     super.initState();
-    _pinnedLocation = widget.initialLocation ??
-        LocationService.defaultPagsanjanCoordinates;
+    _pinnedLocation =
+        widget.initialLocation ?? LocationService.defaultPagsanjanCoordinates;
     _initLocationTracking();
   }
 
@@ -281,7 +281,8 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                               Polyline(
                                 points: [_currentLocation!, _pinnedLocation],
                                 strokeWidth: 3.5,
-                                color: RampColors.primary.withValues(alpha: 0.6),
+                                color:
+                                    RampColors.primary.withValues(alpha: 0.6),
                               ),
                             ],
                           ),
@@ -301,7 +302,8 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                                       width: 38,
                                       height: 38,
                                       decoration: BoxDecoration(
-                                        color: Colors.blue.withValues(alpha: 0.25),
+                                        color:
+                                            Colors.blue.withValues(alpha: 0.25),
                                         shape: BoxShape.circle,
                                       ),
                                     ),
@@ -320,7 +322,6 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                                   ],
                                 ),
                               ),
-
                             Marker(
                               point: _pinnedLocation,
                               width: 50,
@@ -367,13 +368,7 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                               ? const Color(0xFF0F172A).withValues(alpha: 0.9)
                               : Colors.white.withValues(alpha: 0.95),
                           borderRadius: BorderRadius.circular(16),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black26,
-                              blurRadius: 8,
-                              offset: Offset(0, 3),
-                            ),
-                          ],
+                          boxShadow: null,
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -444,9 +439,8 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                           const SizedBox(height: 8),
                           FloatingActionButton.small(
                             heroTag: 'recenter_pinned',
-                            backgroundColor: isDark
-                                ? const Color(0xFF334155)
-                                : Colors.white,
+                            backgroundColor:
+                                isDark ? const Color(0xFF334155) : Colors.white,
                             tooltip: 'Recenter Pinned Marker',
                             onPressed: () {
                               _mapController.move(_pinnedLocation, 16.0);
@@ -467,7 +461,8 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
               SafeArea(
                 top: false,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   color: isDark ? const Color(0xFF1E293B) : Colors.white,
                   child: Row(
                     children: [
@@ -484,8 +479,10 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                           onPressed: _pinCurrentLocation,
                           style: OutlinedButton.styleFrom(
                             foregroundColor: RampColors.primary,
-                            side: const BorderSide(color: RampColors.primary, width: 1.5),
-                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                            side: const BorderSide(
+                                color: RampColors.primary, width: 1.5),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 14, horizontal: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
@@ -495,7 +492,8 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton.icon(
-                          icon: const Icon(Icons.check_circle_rounded, size: 18),
+                          icon:
+                              const Icon(Icons.check_circle_rounded, size: 18),
                           label: const FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
@@ -510,7 +508,8 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
                             backgroundColor: RampColors.primary,
                             foregroundColor: Colors.white,
                             elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 14, horizontal: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),

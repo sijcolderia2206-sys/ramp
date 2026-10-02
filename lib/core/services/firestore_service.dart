@@ -9,7 +9,8 @@ class FirestoreService {
 
   final FirebaseFirestore _firestore;
 
-  Future<Result<List<Map<String, dynamic>>>> loadCollectionResult(String name) async {
+  Future<Result<List<Map<String, dynamic>>>> loadCollectionResult(
+      String name) async {
     try {
       final snapshot = await _firestore.collection(name).get();
       final docs = snapshot.docs
@@ -134,12 +135,23 @@ class FirestoreService {
       electricReadingPrev: number(data['electricReadingPrev']),
       electricReadingCurr: number(data['electricReadingCurr']),
       leasePdfTitle: data['leasePdfTitle'] as String?,
-      isArchived: data['isArchived'] is bool ? data['isArchived'] as bool : false,
-      detailsCompleted: data['detailsCompleted'] is bool ? data['detailsCompleted'] as bool : true,
-      waterUtilityEnabled: data['waterUtilityEnabled'] is bool ? data['waterUtilityEnabled'] as bool : true,
-      electricityUtilityEnabled: data['electricityUtilityEnabled'] is bool ? data['electricityUtilityEnabled'] as bool : true,
-      waterRateOverride: data['waterRateOverride'] == null ? null : number(data['waterRateOverride']),
-      electricityRateOverride: data['electricityRateOverride'] == null ? null : number(data['electricityRateOverride']),
+      isArchived:
+          data['isArchived'] is bool ? data['isArchived'] as bool : false,
+      detailsCompleted: data['detailsCompleted'] is bool
+          ? data['detailsCompleted'] as bool
+          : true,
+      waterUtilityEnabled: data['waterUtilityEnabled'] is bool
+          ? data['waterUtilityEnabled'] as bool
+          : true,
+      electricityUtilityEnabled: data['electricityUtilityEnabled'] is bool
+          ? data['electricityUtilityEnabled'] as bool
+          : true,
+      waterRateOverride: data['waterRateOverride'] == null
+          ? null
+          : number(data['waterRateOverride']),
+      electricityRateOverride: data['electricityRateOverride'] == null
+          ? null
+          : number(data['electricityRateOverride']),
       maintenanceAreas: strings(data['maintenanceAreas']).isNotEmpty
           ? strings(data['maintenanceAreas'])
           : const ['Bathroom', 'Bedroom', 'Indoor Area', 'Outdoor Area'],
@@ -147,6 +159,19 @@ class FirestoreService {
   }
 
   Tenant tenantFromMap(Map<String, dynamic> data) {
+    List<ReminderLog> logs = const [];
+    if (data['reminderLogs'] is List) {
+      logs = (data['reminderLogs'] as List)
+          .map((item) {
+            if (item is Map<String, dynamic>) {
+              return ReminderLog.fromJson(item);
+            }
+            return null;
+          })
+          .whereType<ReminderLog>()
+          .toList();
+    }
+
     return Tenant(
       id: text(data['id']),
       name: text(data['name'], 'Tenant'),
@@ -163,10 +188,12 @@ class FirestoreService {
       dueDate: date(data['dueDate']),
       balance: number(data['balance']),
       status: text(data['status'], 'Active'),
-      isArchived: data['isArchived'] is bool ? data['isArchived'] as bool : false,
+      isArchived:
+          data['isArchived'] is bool ? data['isArchived'] as bool : false,
       avatarUrl: data['avatarUrl'] as String?,
       currentTenancyId: data['currentTenancyId'] as String?,
       messengerHandle: data['messengerHandle'] as String?,
+      reminderLogs: logs,
     );
   }
 
@@ -215,8 +242,10 @@ class FirestoreService {
       photos: strings(data['photos']),
       priority: text(data['priority'], 'Med'),
       status: text(data['status'], 'Schedule Visit'),
-      assignedTo: text(data['assignedTo'], text(data['assignedToName'], 'Alex Rivera')),
-      assignedToName: text(data['assignedToName'], text(data['assignedTo'], 'Alex Rivera')),
+      assignedTo:
+          text(data['assignedTo'], text(data['assignedToName'], 'Alex Rivera')),
+      assignedToName:
+          text(data['assignedToName'], text(data['assignedTo'], 'Alex Rivera')),
       vendorId: data['vendorId'] as String?,
       estimatedCost: number(data['estimatedCost']),
       actualCost: number(data['actualCost'], number(data['vendorCost'])),
@@ -227,19 +256,30 @@ class FirestoreService {
       rating: integer(data['rating']),
       ratingFeedback: data['ratingFeedback'] as String?,
       responsibleParty: text(data['responsibleParty'], 'Landlord'),
-      paymentRequired: data['paymentRequired'] is bool ? data['paymentRequired'] as bool : false,
+      paymentRequired: data['paymentRequired'] is bool
+          ? data['paymentRequired'] as bool
+          : false,
       paymentStatus: text(data['paymentStatus'], 'Not Required'),
       tenancyId: data['tenancyId'] as String?,
       affectedAreas: strings(data['affectedAreas']),
-      issueStartedAt: data['issueStartedAt'] == null ? null : date(data['issueStartedAt']),
-      visitScheduledAt: data['visitScheduledAt'] == null ? null : date(data['visitScheduledAt']),
+      issueStartedAt:
+          data['issueStartedAt'] == null ? null : date(data['issueStartedAt']),
+      visitScheduledAt: data['visitScheduledAt'] == null
+          ? null
+          : date(data['visitScheduledAt']),
       visitTimeWindow: text(data['visitTimeWindow']),
-      visitReminderSent: data['visitReminderSent'] is bool ? data['visitReminderSent'] as bool : false,
+      visitReminderSent: data['visitReminderSent'] is bool
+          ? data['visitReminderSent'] as bool
+          : false,
       replacementItems: strings(data['replacementItems']),
-      repairScheduledAt: data['repairScheduledAt'] == null ? null : date(data['repairScheduledAt']),
+      repairScheduledAt: data['repairScheduledAt'] == null
+          ? null
+          : date(data['repairScheduledAt']),
       repairTimeWindow: text(data['repairTimeWindow']),
       repairer: text(data['repairer']),
-      repairReminderSent: data['repairReminderSent'] is bool ? data['repairReminderSent'] as bool : false,
+      repairReminderSent: data['repairReminderSent'] is bool
+          ? data['repairReminderSent'] as bool
+          : false,
       completionSummary: text(data['completionSummary']),
     );
   }

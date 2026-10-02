@@ -25,13 +25,7 @@ void showDigitalReceiptModal(
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E293B) : Colors.white,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
-            ),
-          ],
+          boxShadow: null,
         ),
         padding: EdgeInsets.only(
           left: 20,
@@ -50,7 +44,8 @@ void showDigitalReceiptModal(
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                      color:
+                          isDark ? Colors.grey.shade700 : Colors.grey.shade300,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -61,70 +56,91 @@ void showDigitalReceiptModal(
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: RampColors.primary.withOpacity(0.12),
-                            shape: BoxShape.circle,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: RampColors.primary.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.receipt_long_rounded,
+                              color: RampColors.primary,
+                              size: 22,
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.receipt_long_rounded,
-                            color: RampColors.primary,
-                            size: 22,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Official Digital Receipt',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : RampColors.slate,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          'Official Digital Receipt',
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : RampColors.slate,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         // Status Badge Pill
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: payment.isPaid
-                                ? const Color(0xFF10B981).withOpacity(0.15)
-                                : const Color(0xFFF59E0B).withOpacity(0.15),
+                                ? const Color(0xFF10B981)
+                                    .withValues(alpha: 0.15)
+                                : const Color(0xFFF59E0B)
+                                    .withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: payment.isPaid
-                                  ? const Color(0xFF10B981).withOpacity(0.4)
-                                  : const Color(0xFFF59E0B).withOpacity(0.4),
+                                  ? const Color(0xFF10B981)
+                                      .withValues(alpha: 0.4)
+                                  : const Color(0xFFF59E0B)
+                                      .withValues(alpha: 0.4),
                             ),
                           ),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                payment.isPaid ? Icons.check_circle_rounded : Icons.pending_actions_rounded,
-                                size: 14,
-                                color: payment.isPaid ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                                payment.isPaid
+                                    ? Icons.check_circle_rounded
+                                    : Icons.pending_actions_rounded,
+                                size: 13,
+                                color: payment.isPaid
+                                    ? const Color(0xFF10B981)
+                                    : const Color(0xFFF59E0B),
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 payment.status.toUpperCase(),
                                 style: GoogleFonts.poppins(
-                                  fontSize: 11,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.bold,
-                                  color: payment.isPaid ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                                  color: payment.isPaid
+                                      ? const Color(0xFF10B981)
+                                      : const Color(0xFFF59E0B),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 4),
                         IconButton(
                           icon: const Icon(Icons.close_rounded),
                           onPressed: () => Navigator.pop(modalCtx),
+                          constraints: const BoxConstraints(),
+                          padding: const EdgeInsets.all(4),
                         ),
                       ],
                     ),
@@ -136,10 +152,13 @@ void showDigitalReceiptModal(
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                    color: isDark
+                        ? const Color(0xFF0F172A)
+                        : const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isDark ? const Color(0xFF334155) : RampColors.border,
+                      color:
+                          isDark ? const Color(0xFF334155) : RampColors.border,
                     ),
                   ),
                   child: Column(
@@ -147,13 +166,18 @@ void showDigitalReceiptModal(
                       // Paper Top Header Accent
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 14, horizontal: 16),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                          color:
+                              isDark ? const Color(0xFF1E293B) : Colors.white,
+                          borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(20)),
                           border: Border(
                             bottom: BorderSide(
-                              color: isDark ? const Color(0xFF334155) : RampColors.border,
+                              color: isDark
+                                  ? const Color(0xFF334155)
+                                  : RampColors.border,
                             ),
                           ),
                         ),
@@ -173,7 +197,9 @@ void showDigitalReceiptModal(
                               "Emin & Mila's Rental Properties • Pagsanjan, Laguna",
                               style: GoogleFonts.poppins(
                                 fontSize: 11,
-                                color: isDark ? const Color(0xFF94A3B8) : RampColors.mutedText,
+                                color: isDark
+                                    ? const Color(0xFF94A3B8)
+                                    : RampColors.mutedText,
                               ),
                             ),
                           ],
@@ -192,7 +218,9 @@ void showDigitalReceiptModal(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                                 letterSpacing: 1.2,
-                                color: isDark ? const Color(0xFF94A3B8) : RampColors.mutedText,
+                                color: isDark
+                                    ? const Color(0xFF94A3B8)
+                                    : RampColors.mutedText,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -200,34 +228,44 @@ void showDigitalReceiptModal(
                               payment.formattedAmount,
                               style: GoogleFonts.poppins(
                                 fontSize: 28,
-                                fontWeight: FontWeight.extrabold,
+                                fontWeight: FontWeight.w800,
                                 color: const Color(0xFF10B981),
                               ),
                             ),
                             Text(
-                              DateFormat('EEEE, MMMM dd, yyyy • hh:mm a').format(payment.paymentDate),
+                              DateFormat('EEEE, MMMM dd, yyyy • hh:mm a')
+                                  .format(payment.effectivePaymentDate),
                               style: GoogleFonts.poppins(
                                 fontSize: 11,
-                                color: isDark ? const Color(0xFF94A3B8) : RampColors.mutedText,
+                                color: isDark
+                                    ? const Color(0xFF94A3B8)
+                                    : RampColors.mutedText,
                               ),
                             ),
                             const SizedBox(height: 16),
 
                             // Reference Number Banner with Copy Action
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 10),
                               decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                color: isDark
+                                    ? const Color(0xFF1E293B)
+                                    : Colors.white,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: isDark ? const Color(0xFF334155) : RampColors.border,
+                                  color: isDark
+                                      ? const Color(0xFF334155)
+                                      : RampColors.border,
                                 ),
                               ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'REFERENCE NUMBER',
@@ -235,7 +273,9 @@ void showDigitalReceiptModal(
                                           fontSize: 9,
                                           fontWeight: FontWeight.bold,
                                           letterSpacing: 0.8,
-                                          color: isDark ? const Color(0xFF94A3B8) : RampColors.mutedText,
+                                          color: isDark
+                                              ? const Color(0xFF94A3B8)
+                                              : RampColors.mutedText,
                                         ),
                                       ),
                                       const SizedBox(height: 2),
@@ -244,7 +284,9 @@ void showDigitalReceiptModal(
                                         style: GoogleFonts.poppins(
                                           fontSize: 13,
                                           fontWeight: FontWeight.bold,
-                                          color: isDark ? Colors.white : RampColors.slate,
+                                          color: isDark
+                                              ? Colors.white
+                                              : RampColors.slate,
                                         ),
                                       ),
                                     ],
@@ -253,11 +295,14 @@ void showDigitalReceiptModal(
                                     borderRadius: BorderRadius.circular(8),
                                     onTap: () {
                                       Clipboard.setData(
-                                        ClipboardData(text: payment.referenceNumber),
+                                        ClipboardData(
+                                            text: payment.referenceNumber),
                                       );
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
                                         const SnackBar(
-                                          content: Text('Reference number copied to clipboard!'),
+                                          content: Text(
+                                              'Reference number copied to clipboard!'),
                                           behavior: SnackBarBehavior.floating,
                                           duration: Duration(seconds: 2),
                                         ),
@@ -266,7 +311,8 @@ void showDigitalReceiptModal(
                                     child: Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: RampColors.primary.withOpacity(0.1),
+                                        color: RampColors.primary
+                                            .withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: const Icon(
@@ -290,7 +336,9 @@ void showDigitalReceiptModal(
                                   child: Container(
                                     height: 1,
                                     color: i % 2 == 0
-                                        ? (isDark ? const Color(0xFF334155) : RampColors.border)
+                                        ? (isDark
+                                            ? const Color(0xFF334155)
+                                            : RampColors.border)
                                         : Colors.transparent,
                                   ),
                                 ),
@@ -307,7 +355,9 @@ void showDigitalReceiptModal(
                                 style: GoogleFonts.poppins(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: isDark ? const Color(0xFF94A3B8) : RampColors.mutedText,
+                                  color: isDark
+                                      ? const Color(0xFF94A3B8)
+                                      : RampColors.mutedText,
                                 ),
                               ),
                             ),
@@ -351,7 +401,9 @@ void showDigitalReceiptModal(
                                   child: Container(
                                     height: 1,
                                     color: i % 2 == 0
-                                        ? (isDark ? const Color(0xFF334155) : RampColors.border)
+                                        ? (isDark
+                                            ? const Color(0xFF334155)
+                                            : RampColors.border)
                                         : Colors.transparent,
                                   ),
                                 ),
@@ -361,26 +413,35 @@ void showDigitalReceiptModal(
                             const SizedBox(height: 12),
 
                             // Billed To & Payment Method Details Grid
-                            _buildInfoRow('Tenant Name:', payment.tenantName, isDark),
-                            _buildInfoRow('Unit Assigned:', payment.unitNumber, isDark),
-                            _buildInfoRow('Payment Channel:', payment.method, isDark),
+                            _buildInfoRow(
+                                'Tenant Name:', payment.tenantName, isDark),
+                            _buildInfoRow(
+                                'Unit Assigned:', payment.unitNumber, isDark),
+                            _buildInfoRow(
+                                'Payment Channel:', payment.method, isDark),
 
                             if (payment.proofImageUrl.isNotEmpty) ...[
                               const SizedBox(height: 14),
                               InkWell(
-                                onTap: () => _showProofImageDialog(context, payment.proofImageUrl),
+                                onTap: () => _showProofImageDialog(
+                                    context, payment.proofImageUrl),
                                 child: Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                    color: isDark
+                                        ? const Color(0xFF1E293B)
+                                        : Colors.white,
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: isDark ? const Color(0xFF334155) : RampColors.border,
+                                      color: isDark
+                                          ? const Color(0xFF334155)
+                                          : RampColors.border,
                                     ),
                                   ),
                                   child: Row(
                                     children: [
-                                      const Icon(Icons.image_outlined, color: RampColors.primary, size: 20),
+                                      const Icon(Icons.image_outlined,
+                                          color: RampColors.primary, size: 20),
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
@@ -392,7 +453,8 @@ void showDigitalReceiptModal(
                                           ),
                                         ),
                                       ),
-                                      const Icon(Icons.chevron_right_rounded, color: RampColors.primary, size: 18),
+                                      const Icon(Icons.chevron_right_rounded,
+                                          color: RampColors.primary, size: 18),
                                     ],
                                   ),
                                 ),
@@ -405,15 +467,22 @@ void showDigitalReceiptModal(
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.qr_code_2_rounded, size: 28, color: RampColors.mutedText),
+                                const Icon(Icons.qr_code_2_rounded,
+                                    size: 24, color: RampColors.mutedText),
                                 const SizedBox(width: 8),
-                                Text(
-                                  'VERIFIED ELECTRONIC RECEIPT • RAMP SYSTEM',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 9,
-                                    letterSpacing: 0.8,
-                                    fontWeight: FontWeight.w600,
-                                    color: isDark ? const Color(0xFF94A3B8) : RampColors.mutedText,
+                                Flexible(
+                                  child: Text(
+                                    'VERIFIED ELECTRONIC RECEIPT • RAMP SYSTEM',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 9,
+                                      letterSpacing: 0.8,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark
+                                          ? const Color(0xFF94A3B8)
+                                          : RampColors.mutedText,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
@@ -431,39 +500,17 @@ void showDigitalReceiptModal(
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        icon: const Icon(Icons.share_rounded, size: 18),
-                        label: const FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text('SHARE RECEIPT'),
-                        ),
-                        onPressed: () async {
-                          await PdfReceiptService.shareReceipt(payment);
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: RampColors.primary,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
                         icon: const Icon(Icons.print_rounded, size: 18),
-                        label: const FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text('PRINT / PDF'),
-                        ),
+                        label: const Text('PRINT / PDF RECEIPT'),
                         onPressed: () async {
                           await PdfReceiptService.printReceipt(payment);
                         },
@@ -473,10 +520,13 @@ void showDigitalReceiptModal(
                       const SizedBox(width: 10),
                       IconButton(
                         style: IconButton.styleFrom(
-                          backgroundColor: isDark ? const Color(0xFF334155) : RampColors.border.withOpacity(0.5),
+                          backgroundColor: isDark
+                              ? const Color(0xFF334155)
+                              : RampColors.border.withValues(alpha: 0.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
+                          padding: const EdgeInsets.all(12),
                         ),
                         icon: const Icon(Icons.edit_outlined, size: 20),
                         tooltip: 'Edit Payment Record',
@@ -508,19 +558,29 @@ Widget _buildLineItem({
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            Icon(icon, size: 16, color: isDark ? const Color(0xFF94A3B8) : RampColors.mutedText),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: isDark ? const Color(0xFFCBD5E1) : RampColors.slate,
+        Expanded(
+          child: Row(
+            children: [
+              Icon(icon,
+                  size: 16,
+                  color:
+                      isDark ? const Color(0xFF94A3B8) : RampColors.mutedText),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: isDark ? const Color(0xFFCBD5E1) : RampColors.slate,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+        const SizedBox(width: 8),
         Text(
           amount,
           style: GoogleFonts.poppins(
@@ -547,12 +607,18 @@ Widget _buildInfoRow(String label, String value, bool isDark) {
             color: isDark ? const Color(0xFF94A3B8) : RampColors.mutedText,
           ),
         ),
-        Text(
-          value,
-          style: GoogleFonts.poppins(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : RampColors.slate,
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : RampColors.slate,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -571,7 +637,8 @@ void _showProofImageDialog(BuildContext context, String imageUrl) {
           Align(
             alignment: Alignment.topRight,
             child: IconButton(
-              icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
+              icon: const Icon(Icons.close_rounded,
+                  color: Colors.white, size: 28),
               onPressed: () => Navigator.pop(ctx),
             ),
           ),

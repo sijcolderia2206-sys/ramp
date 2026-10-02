@@ -6,7 +6,9 @@ import 'package:intl/intl.dart';
 import '../providers/providers.dart';
 import '../core/widgets/core_widgets.dart';
 import '../core/theme/ramp_theme.dart';
+import '../core/navigation/custom_page_transitions.dart';
 import '../core/services/reminder_launcher_service.dart';
+import 'payment_form.dart';
 import 'tenant_form.dart';
 import 'payments_screen.dart';
 import 'unit_detail.dart';
@@ -38,6 +40,22 @@ class TenantProfileScreen extends ConsumerWidget {
           ),
         ) ??
         false;
+  }
+
+  Color _getStatusDotColor(Ticket ticket) {
+    if (ticket.status == 'Completed' ||
+        ticket.status == 'Closed' ||
+        ticket.status.toLowerCase() == 'resolved') {
+      return const Color(0xFF10B981); // Green
+    }
+    if (ticket.priority.toLowerCase() == 'urgent' ||
+        ticket.priority.toLowerCase() == 'emergency') {
+      return const Color(0xFFEF4444); // Red
+    }
+    if (ticket.priority.toLowerCase() == 'high') {
+      return const Color(0xFFF59E0B); // Amber / Orange
+    }
+    return RampColors.primary; // Primary blue
   }
 
   void _showTenantTicketsModal(
@@ -115,10 +133,13 @@ class TenantProfileScreen extends ConsumerWidget {
                               padding: const EdgeInsets.all(12),
                               child: ListTile(
                                 contentPadding: EdgeInsets.zero,
-                                leading: const CircleAvatar(
-                                  backgroundColor: RampColors.warningTint,
-                                  child: Icon(Icons.build,
-                                      color: RampColors.warning),
+                                leading: Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color: _getStatusDotColor(t),
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
                                 title: Text(
                                   t.title,
@@ -199,8 +220,8 @@ class TenantProfileScreen extends ConsumerWidget {
             tooltip: 'Edit Tenant',
             onPressed: () async {
               final saved = await Navigator.of(context).push<bool>(
-                MaterialPageRoute(
-                  builder: (_) => TenantFormScreen(existingTenant: tenant),
+                SlideUpFadeRoute(
+                  page: TenantFormScreen(existingTenant: tenant),
                 ),
               );
               if (saved == true && context.mounted) {
@@ -241,6 +262,45 @@ class TenantProfileScreen extends ConsumerWidget {
                   ),
                 );
               }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded,
+                color: RampColors.danger),
+            tooltip: 'Delete Tenant',
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (dialogContext) => AlertDialog(
+                      title: Text('Delete ${tenant.name}?'),
+                      content: Text(
+                          'Are you sure you want to permanently remove ${tenant.name}? Any assigned unit will be vacated.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dialogContext, false),
+                          child: const Text('CANCEL'),
+                        ),
+                        FilledButton(
+                          style: FilledButton.styleFrom(
+                              backgroundColor: RampColors.danger),
+                          onPressed: () => Navigator.pop(dialogContext, true),
+                          child: const Text('DELETE'),
+                        ),
+                      ],
+                    ),
+                  ) ??
+                  false;
+
+              if (!context.mounted || !confirmed) return;
+              ref.read(tenantProvider.notifier).deleteTenant(tenant.id);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${tenant.name} permanently deleted.'),
+                  backgroundColor: RampColors.danger,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
             },
           ),
         ],
@@ -306,14 +366,23 @@ class TenantProfileScreen extends ConsumerWidget {
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  Container(width: 10, height: 10, decoration: BoxDecoration(color: tenant.healthColor, shape: BoxShape.circle)),
+                                  Container(
+                                      width: 10,
+                                      height: 10,
+                                      decoration: BoxDecoration(
+                                          color: tenant.healthColor,
+                                          shape: BoxShape.circle)),
                                   const SizedBox(width: 6),
-                                  Text(
-                                    'Payer Health: ${tenant.healthStatusText}',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: tenant.healthColor,
+                                  Expanded(
+                                    child: Text(
+                                      'Payer Health: ${tenant.healthStatusText} (${tenant.healthScore}/100)',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: tenant.healthColor,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -380,6 +449,102 @@ class TenantProfileScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: tenant.healthColor.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: tenant.healthColor.withValues(alpha: 0.2)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 10,
+                                    height: 10,
+                                    decoration: BoxDecoration(
+                                      color: tenant.healthColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Payer Health Status',
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: isDark
+                                          ? Colors.white
+                                          : RampColors.slate,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: tenant.healthColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'Score: ${tenant.healthScore}/100',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            tenant.healthStatusText,
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              color: tenant.healthColor,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildHealthDetail(
+                                  label: '30-Day Reminders',
+                                  value: '${tenant.recentRentReminderCount}',
+                                  isDark: isDark,
+                                ),
+                              ),
+                              Expanded(
+                                child: _buildHealthDetail(
+                                  label: 'Total Reminders',
+                                  value: '${tenant.rentReminderCount}',
+                                  isDark: isDark,
+                                ),
+                              ),
+                              Expanded(
+                                child: _buildHealthDetail(
+                                  label: 'Overdue Status',
+                                  value: tenant.isLate
+                                      ? '${tenant.daysOverdue}d Late'
+                                      : 'On Schedule',
+                                  isDark: isDark,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -439,12 +604,18 @@ class TenantProfileScreen extends ConsumerWidget {
                             label: 'SMS Reminder',
                             color: RampColors.primary,
                             onTap: () async {
-                              ref.read(tenantProvider.notifier).incrementTenantReminder(tenant.id, channel: 'SMS');
+                              ref
+                                  .read(tenantProvider.notifier)
+                                  .incrementTenantReminder(tenant.id,
+                                      channel: 'SMS');
                               final message =
-                                  "Hello ${tenant.name}, this is a rent reminder for Unit ${tenant.unitNumber}. Balance: ${tenant.formattedBalance}, due on ${DateFormat('MMM d, yyyy').format(tenant.dueDate)}. Thank you!";
-                              final launched = await ReminderLauncherService.launchSms(phone: tenant.phone, message: message);
+                                  "Hello ${tenant.name}, this is a rent reminder for Unit ${tenant.unitNumber}. Balance: ${tenant.formattedBalance}, due on ${DateFormat('MMM d, yyyy').format(tenant.effectiveDueDate)}. Thank you!";
+                              final launched =
+                                  await ReminderLauncherService.launchSms(
+                                      phone: tenant.phone, message: message);
                               if (!launched) {
-                                await Clipboard.setData(ClipboardData(text: message));
+                                await Clipboard.setData(
+                                    ClipboardData(text: message));
                               }
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -465,19 +636,26 @@ class TenantProfileScreen extends ConsumerWidget {
                             label: 'Messenger Reminder',
                             color: const Color(0xFF0084FF),
                             onTap: () async {
-                              ref.read(tenantProvider.notifier).incrementTenantReminder(tenant.id, channel: 'Messenger');
+                              ref
+                                  .read(tenantProvider.notifier)
+                                  .incrementTenantReminder(tenant.id,
+                                      channel: 'Messenger');
                               final message =
-                                  "Hi ${tenant.name}! Friendly rent reminder for Unit ${tenant.unitNumber}: balance is ${tenant.formattedBalance} due on ${DateFormat('MMM d, yyyy').format(tenant.dueDate)}. Thank you!";
-                              final launched = await ReminderLauncherService.launchMessenger(messengerHandle: tenant.messengerHandle, message: message);
+                                  "Hi ${tenant.name}! Friendly rent reminder for Unit ${tenant.unitNumber}: balance is ${tenant.formattedBalance} due on ${DateFormat('MMM d, yyyy').format(tenant.effectiveDueDate)}. Thank you!";
+                              final launched =
+                                  await ReminderLauncherService.launchMessenger(
+                                      messengerHandle: tenant.messengerHandle,
+                                      message: message);
                               if (!launched) {
-                                await Clipboard.setData(ClipboardData(text: message));
+                                await Clipboard.setData(
+                                    ClipboardData(text: message));
                               }
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   backgroundColor: const Color(0xFF0084FF),
                                   content: Text(launched
-                                      ? 'Messenger opened for ${tenant.name}! Health updated.'
+                                      ? 'Messenger opened for ${tenant.name}! Reminder text copied to clipboard.'
                                       : 'Reminder text copied to clipboard! Health updated.'),
                                 ),
                               );
@@ -493,15 +671,9 @@ class TenantProfileScreen extends ConsumerWidget {
                           child: _buildCRMActionButton(
                             icon: Icons.receipt_long_rounded,
                             label: 'Record Payment',
-                            color: RampColors.success,
-                            onTap: () =>
-                                Navigator.of(context, rootNavigator: true)
-                                    .push(MaterialPageRoute(
-                              builder: (_) => PaymentsScreen(
-                                initialTenant: tenant,
-                                openPaymentForm: true,
-                              ),
-                            )),
+                            color: RampColors.primary,
+                            onTap: () => showRecordPaymentSheet(context, ref,
+                                initialTenant: tenant),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -539,15 +711,18 @@ class TenantProfileScreen extends ConsumerWidget {
                             label: 'Unit Details',
                             color: const Color(0xFF6366F1),
                             onTap: () {
-                              if (tenant.unitId != null && tenant.unitId!.isNotEmpty) {
+                              if (tenant.unitId.isNotEmpty) {
                                 Navigator.of(context, rootNavigator: true).push(
                                   MaterialPageRoute(
-                                    builder: (_) => UnitDetailScreen(unitId: tenant.unitId!),
+                                    builder: (_) =>
+                                        UnitDetailScreen(unitId: tenant.unitId),
                                   ),
                                 );
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Tenant is not assigned to a unit.')),
+                                  const SnackBar(
+                                      content: Text(
+                                          'Tenant is not assigned to a unit.')),
                                 );
                               }
                             },
@@ -557,6 +732,73 @@ class TenantProfileScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+              if (tenant.reminderLogs.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                Text(
+                  'Reminder Dispatch History (${tenant.reminderLogs.length})',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : RampColors.slate,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                RampCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: tenant.reminderLogs.reversed.map((log) {
+                      final isSms = log.channel.toLowerCase().contains('sms');
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundColor: isSms
+                                  ? RampColors.softBlueTint
+                                  : const Color(0xFFE8F0FE),
+                              child: Icon(
+                                isSms ? Icons.sms_rounded : Icons.forum_rounded,
+                                size: 16,
+                                color: isSms
+                                    ? RampColors.primary
+                                    : const Color(0xFF0084FF),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${log.messageType} via ${log.channel}',
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: isDark
+                                          ? Colors.white
+                                          : RampColors.slate,
+                                    ),
+                                  ),
+                                  Text(
+                                    log.formattedTime,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      color: isDark
+                                          ? const Color(0xFF94A3B8)
+                                          : RampColors.mutedText,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -602,6 +844,34 @@ class TenantProfileScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildHealthDetail({
+    required String label,
+    required String value,
+    required bool isDark,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            color: isDark ? const Color(0xFF94A3B8) : RampColors.mutedText,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : RampColors.slate,
+          ),
+        ),
+      ],
     );
   }
 }

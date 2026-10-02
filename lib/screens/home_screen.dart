@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:table_calendar/table_calendar.dart';
 import '../providers/providers.dart';
 import '../core/theme/ramp_theme.dart';
 import '../core/widgets/core_widgets.dart';
@@ -11,12 +10,13 @@ import '../core/services/persistence_queue.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../features/calendar/widgets/calendar_bottom_sheet.dart';
 import '../features/calendar/providers/calendar_providers.dart';
+import '../core/navigation/custom_page_transitions.dart';
 import 'ai_assistant.dart';
 import 'payments_screen.dart';
+import 'payment_form.dart';
 import 'tenant_profile.dart';
 import 'tenant_form.dart';
 import 'ticket_form.dart';
-import 'unit_detail.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -25,127 +25,72 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _CalendarEventCard extends StatelessWidget {
-  const _CalendarEventCard({
-    required this.accent,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.details,
-    required this.actions,
-  });
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  static final NumberFormat _currencyFormat = NumberFormat.currency(
+    locale: 'en_PH',
+    symbol: '₱',
+    decimalDigits: 2,
+  );
 
-  final Color accent;
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String details;
-  final List<Widget> actions;
+  bool _showAllSchedule = false;
+  bool _showAllDueSoon = false;
+  bool _showAllActivity = false;
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return RampCard(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: EdgeInsets.zero,
-      borderRadius: 16,
-      child: Theme(
-        data: theme.copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.fromLTRB(14, 6, 10, 6),
-          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-          leading: Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: accent, size: 20),
+  Widget _buildShowMoreLessButton({
+    required bool isExpanded,
+    required int remainingCount,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    final label = isExpanded
+        ? 'Show Less'
+        : (remainingCount > 0
+            ? 'See More ($remainingCount more)'
+            : 'See More');
+
+    return InkWell(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isDark
+              ? const Color(0xFF1E293B)
+              : RampColors.softBlueTint.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: RampColors.primary.withValues(alpha: 0.2),
+            width: 1,
           ),
-          title: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          subtitle: Text(
-            subtitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontSize: 12,
-            ),
-          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                details,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontSize: 12,
-                ),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: RampColors.primary,
               ),
             ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: actions,
-              ),
+            const SizedBox(width: 6),
+            Icon(
+              isExpanded
+                  ? Icons.keyboard_arrow_up_rounded
+                  : Icons.keyboard_arrow_down_rounded,
+              size: 18,
+              color: RampColors.primary,
             ),
           ],
         ),
       ),
     );
   }
-}
-
-class _CalendarAction extends StatelessWidget {
-  const _CalendarAction({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 17),
-      label: FittedBox(fit: BoxFit.scaleDown, child: Text(label)),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 40),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-    );
-  }
-}
-
-class _HomeScreenState extends ConsumerState<HomeScreen> {
-  DateTime _focusedDay = DateTime.now();
-  DateTime? _selectedDay;
-  CalendarFormat _calendarFormat = CalendarFormat.month;
-
-  static final NumberFormat _currencyFormat = NumberFormat.currency(
-    locale: 'en_PH',
-    symbol: '₱',
-    decimalDigits: 2,
-  );
 
   Future<bool> _confirmAction(
     BuildContext context, {
@@ -231,92 +176,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _selectedDay = _focusedDay;
-  }
-
-  DateTime _rentDateForMonth(
-      Tenant tenant, List<Unit> units, DateTime monthReference) {
-    final unit = units.where((u) => u.id == tenant.unitId).firstOrNull;
-    final requestedDay = unit?.rentDueDay ?? tenant.dueDate.day;
-    final lastDay =
-        DateTime(monthReference.year, monthReference.month + 1, 0).day;
-    return DateTime(monthReference.year, monthReference.month,
-        requestedDay.clamp(1, lastDay).toInt());
-  }
-
   String _getInitials(String name) {
     final cleanName = name.replaceAll(RegExp(r"[^\w\s]"), '').trim();
-    final parts = cleanName.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts =
+        cleanName.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     if (parts.isEmpty) return 'EM';
     if (parts.length == 1) {
-      return parts.first.substring(0, parts.first.length.clamp(1, 2)).toUpperCase();
+      return parts.first
+          .substring(0, parts.first.length.clamp(1, 2))
+          .toUpperCase();
     }
     return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
 
-  void _closeCalendarAndOpen(
-    BuildContext pageContext,
-    String route, {
-    Tenant? tenant,
-    Ticket? ticket,
-  }) {
-    if (Navigator.canPop(pageContext)) {
-      Navigator.pop(pageContext);
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (route == '/payments/new') {
-        Navigator.of(context, rootNavigator: true).push(
-          MaterialPageRoute(
-              builder: (_) => PaymentsScreen(initialTenant: tenant)),
-        );
-      } else if (route == '/maintenance/new') {
-        Navigator.of(context, rootNavigator: true).push(
-          MaterialPageRoute(builder: (_) => const TicketFormScreen()),
-        );
-      } else if (route == '/payments') {
-        Navigator.of(context, rootNavigator: true).push(
-          MaterialPageRoute(builder: (_) => const PaymentsScreen()),
-        );
-      } else if (route == '/maintenance') {
-        if (ticket != null) {
-          Navigator.of(context, rootNavigator: true).push(
-            MaterialPageRoute(
-              builder: (_) => TicketFormScreen(existingTicket: ticket),
-            ),
-          );
-        } else {
-          ref.read(bottomNavIndexProvider.notifier).state = 3;
-        }
-      } else if (route == '/tenants') {
-        if (tenant != null) {
-          Navigator.of(context, rootNavigator: true).push(
-            MaterialPageRoute(
-              builder: (_) => TenantProfileScreen(tenantId: tenant.id),
-            ),
-          );
-        } else {
-          ref.read(bottomNavIndexProvider.notifier).state = 2;
-        }
-      } else if (route == '/units') {
-        ref.read(bottomNavIndexProvider.notifier).state = 1;
-      } else if (route.startsWith('/units/')) {
-        final unitId = route.substring('/units/'.length);
-        Navigator.of(context, rootNavigator: true).push(
-          MaterialPageRoute(builder: (_) => UnitDetailScreen(unitId: unitId)),
-        );
-      }
-    });
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
   }
+
+
 
   void _openRecentActivity(ActivityLog activity) {
     final text = '${activity.title} ${activity.description}'.toLowerCase();
     if (text.contains('payment') || text.contains('late fee')) {
       Navigator.of(context, rootNavigator: true).push(
-        MaterialPageRoute(builder: (_) => const PaymentsScreen()),
+        FadePageRoute(page: const PaymentsScreen()),
       );
     } else if (text.contains('maintenance') || text.contains('ticket')) {
       ref.read(bottomNavIndexProvider.notifier).state = 3;
@@ -327,13 +213,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  // --- CALENDAR IN BOTTOM SHEET ---
-  void _showCalendarBottomSheet(BuildContext context) {
-    showRampCalendarBottomSheet(context);
-  }
-
-
-
   Widget _buildFinancialMetricRow({
     required IconData icon,
     required Color iconColor,
@@ -343,22 +222,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 15, color: iconColor),
+            SizedBox(
+              width: 18,
+              child: Icon(icon, size: 15, color: iconColor),
+            ),
             const SizedBox(width: 6),
             Text(
               label,
               style: GoogleFonts.poppins(
                 fontSize: 12,
+                fontWeight: FontWeight.w500,
                 color: isDark ? const Color(0xFF94A3B8) : RampColors.mutedText,
               ),
             ),
           ],
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: 8),
         Flexible(
           child: FittedBox(
             fit: BoxFit.scaleDown,
@@ -374,6 +258,473 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildQuickActionButton({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required Color color,
+    required Color bgColor,
+    required VoidCallback onTap,
+  }) {
+    final hasSpace = label.contains(' ');
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            onTap();
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 2.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: color, size: 28),
+                const SizedBox(height: 6),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                      height: 1.2,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: hasSpace ? 2 : 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUpcomingScheduleTab(
+      BuildContext context, WidgetRef ref, bool isDark) {
+    final allEvents = ref.watch(unifiedCalendarEventsProvider);
+    final nowAtMidnight =
+        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+
+    final upcoming = allEvents.where((e) {
+      final eDate = DateTime(e.date.year, e.date.month, e.date.day);
+      final isUpcoming = !eDate.isBefore(nowAtMidnight) || e.isOverdue;
+      final isRepairOrNonRent = e.type != 'rent'; // Rent Dues belong to the adjacent "Due Soon" tab
+      return isUpcoming && isRepairOrNonRent;
+    }).toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+
+    if (upcoming.isEmpty) {
+      return Center(
+        child: Text(
+          'No upcoming repair or maintenance schedules.',
+          style: GoogleFonts.poppins(color: RampColors.mutedText, fontSize: 13),
+        ),
+      ).animate().fadeIn(duration: 300.ms);
+    }
+
+    final hasMoreThanFive = upcoming.length > 5;
+    final displayCount =
+        (_showAllSchedule || !hasMoreThanFive) ? upcoming.length : 5;
+    final totalItemCount = hasMoreThanFive ? displayCount + 1 : displayCount;
+
+    return ListView.separated(
+      physics: const BouncingScrollPhysics(),
+      itemCount: totalItemCount,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        if (hasMoreThanFive && index == displayCount) {
+          return _buildShowMoreLessButton(
+            isExpanded: _showAllSchedule,
+            remainingCount: upcoming.length - 5,
+            isDark: isDark,
+            onTap: () {
+              setState(() {
+                _showAllSchedule = !_showAllSchedule;
+              });
+            },
+          );
+        }
+
+        final e = upcoming[index];
+        return ConstrainedBox(
+          constraints:
+              const BoxConstraints(minHeight: 48), // Minimum 48px height
+          child: InkWell(
+            onTap: () => showRampCalendarBottomSheet(context),
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color:
+                    isDark ? const Color(0xFF181A1C) : const Color(0xFFF8F9FA),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: e.isOverdue
+                      ? Colors.red.withValues(alpha: 0.3)
+                      : Colors.transparent,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: e.isOverdue ? Colors.red : e.categoryColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          e.title,
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          e.categoryLabel,
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.5,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: e.categoryColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      DateFormat('MMM dd').format(e.date),
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: e.categoryColor,
+                      ),
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ).animate().fadeIn(
+            duration: (200 + index * 40).ms); // Individual FadeIn per item
+      },
+    );
+  }
+
+  Widget _buildDueSoonTab(BuildContext context, WidgetRef ref,
+      List<dynamic> upcomingDues, bool isDark) {
+    if (upcomingDues.isEmpty) {
+      return Center(
+        child: Text(
+          'No upcoming rent dues pending.',
+          style: GoogleFonts.poppins(color: RampColors.mutedText, fontSize: 13),
+        ),
+      ).animate().fadeIn(duration: 300.ms);
+    }
+
+    final hasMoreThanFive = upcomingDues.length > 5;
+    final displayCount =
+        (_showAllDueSoon || !hasMoreThanFive) ? upcomingDues.length : 5;
+    final totalItemCount = hasMoreThanFive ? displayCount + 1 : displayCount;
+
+    return ListView.separated(
+      physics: const BouncingScrollPhysics(),
+      itemCount: totalItemCount,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        if (hasMoreThanFive && index == displayCount) {
+          return _buildShowMoreLessButton(
+            isExpanded: _showAllDueSoon,
+            remainingCount: upcomingDues.length - 5,
+            isDark: isDark,
+            onTap: () {
+              setState(() {
+                _showAllDueSoon = !_showAllDueSoon;
+              });
+            },
+          );
+        }
+
+        final item = upcomingDues[index];
+        final isOverdue = item.isOverdue;
+
+        return ConstrainedBox(
+          constraints:
+              const BoxConstraints(minHeight: 48), // Minimum 48px height
+          child: InkWell(
+            onTap: () {
+              final tenant = ref
+                  .read(tenantProvider)
+                  .where((t) => t.id == item.tenantId)
+                  .firstOrNull;
+              if (tenant != null) {
+                Navigator.of(context, rootNavigator: true).push(
+                  MaterialPageRoute(
+                    builder: (_) => TenantProfileScreen(tenantId: tenant.id),
+                  ),
+                );
+              }
+            },
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color:
+                    isDark ? const Color(0xFF181A1C) : const Color(0xFFF8F9FA),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isOverdue
+                      ? Colors.red.withValues(alpha: 0.3)
+                      : Colors.transparent,
+                ),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundColor: isOverdue
+                        ? const Color(0x20EF4444)
+                        : const Color(0x2010B981),
+                    child: Icon(
+                      isOverdue
+                          ? Icons.warning_amber_outlined
+                          : Icons.schedule_outlined,
+                      color: isOverdue
+                          ? const Color(0xFFEF4444)
+                          : const Color(0xFF10B981),
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          item.tenantName,
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '${item.unitNumber} • ${item.dueStatusText}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: isOverdue
+                                ? const Color(0xFFEF4444)
+                                : RampColors.mutedText,
+                            fontWeight:
+                                isOverdue ? FontWeight.bold : FontWeight.normal,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        item.formattedAmount,
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: const Color(0xFF10B981),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      InkWell(
+                        onTap: () {
+                          final tenant = ref
+                              .read(tenantProvider)
+                              .where((tenant) => tenant.id == item.tenantId)
+                              .firstOrNull;
+                          Navigator.of(context, rootNavigator: true).push(
+                            FadePageRoute(
+                              page: PaymentsScreen(
+                                initialTenant: tenant,
+                                openPaymentForm: true,
+                              ),
+                            ),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: RampColors.primary,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Pay ₱',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ).animate().fadeIn(
+            duration: (200 + index * 40).ms); // Individual FadeIn per item
+      },
+    );
+  }
+
+  Widget _buildRecentActivityTab(BuildContext context, WidgetRef ref,
+      List<dynamic> activities, bool isDark) {
+    if (activities.isEmpty) {
+      return Center(
+        child: Text(
+          'No recent activity logged.',
+          style: GoogleFonts.poppins(color: RampColors.mutedText, fontSize: 13),
+        ),
+      ).animate().fadeIn(duration: 300.ms);
+    }
+
+    final hasMoreThanFive = activities.length > 5;
+    final displayCount =
+        (_showAllActivity || !hasMoreThanFive) ? activities.length : 5;
+    final totalItemCount = hasMoreThanFive ? displayCount + 1 : displayCount;
+
+    return ListView.separated(
+      physics: const BouncingScrollPhysics(),
+      itemCount: totalItemCount,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        if (hasMoreThanFive && index == displayCount) {
+          return _buildShowMoreLessButton(
+            isExpanded: _showAllActivity,
+            remainingCount: activities.length - 5,
+            isDark: isDark,
+            onTap: () {
+              setState(() {
+                _showAllActivity = !_showAllActivity;
+              });
+            },
+          );
+        }
+
+        final act = activities[index];
+        return ConstrainedBox(
+          constraints:
+              const BoxConstraints(minHeight: 48), // Minimum 48px height
+          child: InkWell(
+            onTap: () => _openRecentActivity(act),
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color:
+                    isDark ? const Color(0xFF181A1C) : const Color(0xFFF8F9FA),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundColor: act.iconBgColor,
+                    child: Icon(act.icon, size: 16, color: RampColors.primary),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          act.title,
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          act.description,
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: RampColors.mutedText,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      act.timeAgo,
+                      style: GoogleFonts.poppins(
+                        fontSize: 10.5,
+                        color: RampColors.mutedText,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ).animate().fadeIn(
+            duration: (200 + index * 40).ms); // Individual FadeIn per item
+      },
     );
   }
 
@@ -540,9 +891,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final tickets = ref.watch(ticketProvider);
-    final payments = ref.watch(paymentProvider);
-    final events = ref.watch(eventProvider);
     final activities = ref.watch(activityProvider);
     final upcomingDues = ref.watch(upcomingDues7DaysProvider);
     final landlordProfile = ref.watch(landlordProfileProvider);
@@ -553,28 +901,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         .where((tenant) => !tenant.isArchived)
         .toList();
     final now = DateTime.now();
-    final paidTenantKeys = payments
-        .where((payment) =>
-            payment.isRent &&
-            payment.status.toLowerCase() == 'paid' &&
-            payment.date.year == now.year &&
-            payment.date.month == now.month)
-        .map((payment) => '${payment.tenantName}|${payment.unitNumber}')
-        .toSet();
-    final paidTenantCount = activeTenants
-        .where((tenant) =>
-            paidTenantKeys.contains('${tenant.name}|${tenant.unitNumber}') ||
-            payments.any((p) =>
-                p.tenantId == tenant.id &&
-                p.isRent &&
-                p.isPaid &&
-                p.date.year == now.year &&
-                p.date.month == now.month))
-        .length;
-    final collectionProgress = activeTenants.isEmpty
-        ? 0.0
-        : (paidTenantCount / activeTenants.length).clamp(0.0, 1.0);
-    final collectionPercent = (collectionProgress * 100).round();
 
     final totalRevenueCollected = ref.watch(kpiTotalRevenueProvider);
     final netOperatingIncomeVal = ref.watch(netOperatingIncomeProvider);
@@ -584,518 +910,312 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
     final targetRevenueVal = totalRevenueCollected + pendingDuesVal;
 
+    final collectionProgress = targetRevenueVal > 0 
+        ? (totalRevenueCollected / targetRevenueVal).clamp(0.0, 1.0)
+        : (totalRevenueCollected > 0 ? 1.0 : 0.0);
+    final collectionPercent = (collectionProgress * 100).round();
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: null,
-        onPressed: () => _showAiAssistantBottomSheet(context),
-        backgroundColor: Color(0xFF0D6EFD),
-        elevation: 4,
-        icon: Icon(Icons.auto_awesome, color: Colors.white),
-        label: Text(
-          'RAMP AI',
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
-          ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.only(bottom: 16.0, right: 16.0, left: 16.0, top: 8.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            FloatingActionButton.extended(
+              heroTag: 'ramp_ai_fab',
+              onPressed: () => _showAiAssistantBottomSheet(context),
+              backgroundColor: RampColors.primary,
+              elevation: 0,
+              icon: const Icon(Icons.auto_awesome_outlined,
+                  color: Colors.white, size: 20),
+              label: Text(
+                'RAMP AI',
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          HapticFeedback.lightImpact();
-          await hydratePersistentAppData(ref);
-        },
-        child: SafeArea(
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics(),
-                ),
-                padding:
-                    EdgeInsets.only(left: 18, right: 18, top: 16, bottom: 100),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // --- 1. TOP HEADER: "Good morning" + Profile Avatar + Notification Bell with Badge ---
-                    AdaptiveRow(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: () async {
+              HapticFeedback.lightImpact();
+              await hydratePersistentAppData(ref);
+            },
+            child: SafeArea(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
+                    padding: const EdgeInsets.only(
+                      left: 18,
+                      right: 18,
+                      top: 16,
+                      bottom:
+                          120, // Extra bottom padding so FAB never obscures list items
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        // --- 1. TOP HEADER: Dynamic Greeting & Header Shortcuts Row ---
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Clickable Profile Avatar
-                            GestureDetector(
-                              onTap: () {
-                                // Navigate to Profile tab (Index 4)
-                                ref
-                                    .read(bottomNavIndexProvider.notifier)
-                                    .state = 4;
-                              },
-                              child: Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Theme.of(context).colorScheme.primary,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Color(0x1A0D6EFD),
-                                      blurRadius: 10,
-                                      offset: Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    _getInitials(landlordProfile.name),
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.bold,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onPrimary,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Text(
-                                  'Good morning',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
-                                ),
-                                Text(
-                                  landlordProfile.name,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        // Notification Bell Icon with Badge
-                        Consumer(
-                          builder: (context, ref, child) {
-                            final notifs = ref.watch(notificationProvider);
-                            final unreadCount = notifs
-                                .where((n) => !n.isRead && !n.isArchived)
-                                .length;
-                            return Material(
-                              color: Theme.of(context).colorScheme.surface,
-                              borderRadius: BorderRadius.circular(16),
-                              child: InkWell(
-                                onTap: () => _showNotifications(context),
-                                borderRadius: BorderRadius.circular(16),
-                                child: Container(
-                                  padding: EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        Theme.of(context).colorScheme.surface,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .outlineVariant,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Color(0x0A000000),
-                                        blurRadius: 10,
-                                        offset: Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Badge(
-                                    label: Text(
-                                      unreadCount.toString(),
-                                      style: GoogleFonts.poppins(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                    isLabelVisible: unreadCount > 0,
-                                    backgroundColor: Color(0xFF0D6EFD),
-                                    child: Icon(
-                                      Icons.notifications_none_rounded,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface,
-                                      size: 24,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 20),
-
-                    // --- OFFLINE SYNC BANNER ---
-                    ValueListenableBuilder<PersistenceQueueState>(
-                      valueListenable: PersistenceQueue.instance,
-                      builder: (context, writes, _) {
-                        if (writes.pending.isEmpty && !writes.isSyncing && writes.lastError == null) {
-                          return const SizedBox.shrink();
-                        }
-                        final hasFailure = writes.lastError != null;
-                        final pendingCount = writes.pending.length;
-                        return Column(
-                          children: [
-                            RampCard(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              backgroundColor: isDark ? const Color(0xFF342B1D) : const Color(0xFFFFF3E0),
-                              borderColor: isDark ? const Color(0xFF8A6A35) : const Color(0xFFF59E0B),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    hasFailure ? Icons.error_outline_rounded : Icons.cloud_sync_rounded,
-                                    color: hasFailure ? RampColors.danger : const Color(0xFFF59E0B),
-                                    size: 22,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          hasFailure ? 'Sync Error' : (writes.isSyncing ? 'Syncing Changes...' : 'Pending Sync Queue'),
-                                          style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                            color: isDark ? const Color(0xFFD5B477) : const Color(0xFFB45309),
-                                          ),
-                                        ),
-                                        Text(
-                                          hasFailure
-                                              ? writes.lastError!
-                                              : '$pendingCount action(s) stored locally. Will sync when reconnected.',
-                                          style: GoogleFonts.poppins(fontSize: 11, color: RampColors.mutedText),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.sync_rounded, size: 20, color: Color(0xFFF59E0B)),
-                                    tooltip: 'Retry Sync',
-                                    onPressed: () {
-                                      PersistenceQueue.instance.retry();
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-                        );
-                      },
-                    ),
-
-                    // --- 2. HERO REVENUE OVERVIEW ---
-                    // --- 2. DEDICATED FINANCIAL OVERVIEW CARD (IMAGE 1 INSPIRATION) ---
-                    RampCard(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header Row
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: isDark ? const Color(0xFF1E3A5F) : const Color(0xFFE8F1FF),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(Icons.pie_chart_outline_rounded,
-                                        color: RampColors.primary, size: 22),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                Expanded(
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        'Financial Overview',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.bold,
-                                          color: Theme.of(context).colorScheme.onSurface,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Monthly Rent Collection Performance',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 11,
-                                          color: RampColors.mutedText,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Gauge & Metrics Row
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              // Circular Collection Meter (Left)
-                              SizedBox(
-                                width: 115,
-                                height: 115,
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    SizedBox.expand(
-                                      child: CircularProgressIndicator(
-                                        value: collectionProgress,
-                                        strokeWidth: 12,
-                                        backgroundColor: isDark
-                                            ? const Color(0xFF334155)
-                                            : const Color(0xFFE2E8F0),
-                                        color: const Color(0xFF0D6EFD),
-                                        strokeCap: StrokeCap.round,
-                                      ),
-                                    ),
-                                    Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text(
-                                            '$collectionPercent%',
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 22,
-                                              fontWeight: FontWeight.bold,
-                                              color: Theme.of(context).colorScheme.onSurface,
+                                      // Clickable Profile Avatar
+                                      GestureDetector(
+                                        onTap: () {
+                                          ref
+                                              .read(bottomNavIndexProvider.notifier)
+                                              .state = 4;
+                                        },
+                                        child: Container(
+                                          width: 44,
+                                          height: 44,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary,
+                                            boxShadow: null,
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              _getInitials(landlordProfile.name),
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onPrimary,
+                                              ),
                                             ),
                                           ),
                                         ),
-                                        Text(
-                                          'Collected',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 11,
-                                            color: RampColors.mutedText,
-                                            fontWeight: FontWeight.w500,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              '${_getGreeting()}, ${landlordProfile.name.split(' ').first}',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 12.5,
+                                                fontWeight: FontWeight.w500,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            Text(
+                                              'Apex Rental Properties',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 16.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                // Notification Bell Icon with Badge Aligned to the Right
+                                Consumer(
+                                  builder: (context, ref, child) {
+                                    final notifs = ref.watch(notificationProvider);
+                                    final unreadCount = notifs
+                                        .where((n) => !n.isRead && !n.isArchived)
+                                        .length;
+                                    return Material(
+                                      color: Colors.transparent,
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: InkWell(
+                                        onTap: () => _showNotifications(context),
+                                        borderRadius: BorderRadius.circular(20),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(10),
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .surface,
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .outlineVariant,
+                                            ),
+                                            boxShadow: null,
+                                          ),
+                                          child: Badge(
+                                            label: Text(
+                                              unreadCount.toString(),
+                                              style: GoogleFonts.poppins(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold),
+                                            ),
+                                            isLabelVisible: unreadCount > 0,
+                                            backgroundColor: RampColors.primary,
+                                            child: Icon(
+                                              Icons.notifications_none_outlined,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface,
+                                              size: 22,
+                                            ),
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 18),
-
-                              // Stacked Metrics (Right)
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    _buildFinancialMetricRow(
-                                      icon: Icons.gps_fixed_rounded,
-                                      iconColor: const Color(0xFF6B7280),
-                                      label: 'Target',
-                                      value: _currencyFormat.format(targetRevenueVal),
-                                      isDark: isDark,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildFinancialMetricRow(
-                                      icon: Icons.check_circle_rounded,
-                                      iconColor: const Color(0xFF10B981),
-                                      label: 'Collected',
-                                      value: _currencyFormat.format(totalRevenueCollected),
-                                      isDark: isDark,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildFinancialMetricRow(
-                                      icon: Icons.pending_actions_rounded,
-                                      iconColor: pendingDuesVal > 0 ? const Color(0xFFEF4444) : const Color(0xFF10B981),
-                                      label: 'Pending',
-                                      value: _currencyFormat.format(pendingDuesVal),
-                                      isDark: isDark,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildFinancialMetricRow(
-                                      icon: Icons.trending_up_rounded,
-                                      iconColor: const Color(0xFF0D6EFD),
-                                      label: 'Net NOI',
-                                      value: _currencyFormat.format(netOperatingIncomeVal),
-                                      isDark: isDark,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 18),
-
-                          // Bottom Deadline Strip
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.event_outlined, size: 18, color: RampColors.primary),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Next Due Cycle: ${DateFormat("MMM dd, yyyy").format(DateTime(now.year, now.month + 1, 5))}',
-                                    style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Primary Action Button
-                          SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0D6EFD),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                elevation: 0,
-                              ),
-                              icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                              label: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  'View Full Ledger',
-                                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14),
-                                ),
-                              ),
-                              onPressed: () => Navigator.of(context, rootNavigator: true)
-                                  .push(MaterialPageRoute(builder: (_) => const PaymentsScreen())),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // --- 3. QUICK MANAGEMENT ACTIONS ---
-                    Text(
-                      'Manage',
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    SizedBox(height: 14),
-                    AdaptiveRow(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Expanded(
-                          child: ActionButton(
-                            icon: Icons.add_card_rounded,
-                            label: 'Payments',
-                            color: Color(0xFF10B981),
-                            backgroundColor: Color(0xFFE6F4EA),
-                            onTap: () => showRecordPaymentSheet(context, ref),
-                          ),
+                          ],
                         ),
-                        Expanded(
-                          child: ActionButton(
-                            icon: Icons.handyman_rounded,
-                            label: 'Maintenance',
-                            color: Color(0xFFF59E0B),
-                            backgroundColor: Color(0xFFFEF3C7),
-                            onTap: () => Navigator.of(context,
-                                    rootNavigator: true)
-                                .push(MaterialPageRoute(
-                                    builder: (_) => const TicketFormScreen())),
-                          ),
-                        ),
-                        Expanded(
-                          child: ActionButton(
-                            icon: Icons.person_add_rounded,
-                            label: 'Add Tenant',
-                            color: Color(0xFF0D6EFD),
-                            backgroundColor: Color(0xFFE8F1FF),
-                            onTap: () => Navigator.of(context,
-                                    rootNavigator: true)
-                                .push(MaterialPageRoute(
-                                    builder: (_) => const TenantFormScreen())),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 24),
+                        const SizedBox(height: 20),
 
-                    // --- 4. CALENDAR / SCHEDULE HEADER WITH TAP ICON -> BOTTOM SHEET ---
-                    RampCard(
-                      borderColor: Colors.transparent,
-                      boxShadow: const [],
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Row(
-                                  children: [
-                                    // TAP ICON = Opens full interactive calendar
-                                    InkWell(
-                                      onTap: () =>
-                                          showRampCalendarBottomSheet(context),
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(10),
-                                        decoration: BoxDecoration(
-                                          color: Theme.of(context).brightness == Brightness.dark
-                                              ? const Color(0xFF202B3D)
-                                              : const Color(0xFFE8F1FF),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Icon(
-                                          Icons.calendar_month_rounded,
-                                          color: Theme.of(context).brightness == Brightness.dark
-                                              ? const Color(0xFF7896CC)
-                                              : const Color(0xFF0D6EFD),
-                                          size: 22,
+                        // --- OFFLINE SYNC BANNER ---
+                        ValueListenableBuilder<PersistenceQueueState>(
+                          valueListenable: PersistenceQueue.instance,
+                          builder: (context, writes, _) {
+                            if (writes.pending.isEmpty &&
+                                !writes.isSyncing &&
+                                writes.lastError == null) {
+                              return const SizedBox.shrink();
+                            }
+                            final hasFailure = writes.lastError != null;
+                            final pendingCount = writes.pending.length;
+                            return Column(
+                              children: [
+                                RampCard(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                                  backgroundColor: isDark
+                                      ? const Color(0xFF342B1D)
+                                      : const Color(0xFFFFF3E0),
+                                  borderColor: isDark
+                                      ? const Color(0xFF8A6A35)
+                                      : const Color(0xFFF59E0B),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        hasFailure
+                                            ? Icons.error_outline_rounded
+                                            : Icons.cloud_sync_rounded,
+                                        color: hasFailure
+                                            ? RampColors.danger
+                                            : const Color(0xFFF59E0B),
+                                        size: 22,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              hasFailure
+                                                  ? 'Sync Error'
+                                                  : (writes.isSyncing
+                                                      ? 'Syncing Changes...'
+                                                      : 'Pending Sync Queue'),
+                                              style: GoogleFonts.poppins(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13,
+                                                color: isDark
+                                                    ? const Color(0xFFD5B477)
+                                                    : const Color(0xFFB45309),
+                                              ),
+                                            ),
+                                            Text(
+                                              hasFailure
+                                                  ? writes.lastError!
+                                                  : '$pendingCount action(s) stored locally. Will sync when reconnected.',
+                                              style: GoogleFonts.poppins(
+                                                  fontSize: 11,
+                                                  color: RampColors.mutedText),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                      IconButton(
+                                        icon: const Icon(Icons.sync_rounded,
+                                            size: 20, color: Color(0xFFF59E0B)),
+                                        tooltip: 'Retry Sync',
+                                        onPressed: () {
+                                          PersistenceQueue.instance.retry();
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                            );
+                          },
+                        ),
+
+                        // --- 2. SIDE-BY-SIDE FINANCIAL OVERVIEW CARD ---
+                        RampCard(
+                          padding: const EdgeInsets.all(18),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Header Row
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: isDark
+                                              ? const Color(0xFF1E3A5F)
+                                              : const Color(0xFFE8F1FF),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                            Icons.pie_chart_outline_rounded,
+                                            color: RampColors.primary,
+                                            size: 20),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            'Upcoming Schedule',
+                                            'Financial Overview',
                                             style: GoogleFonts.poppins(
-                                              fontSize: 18,
+                                              fontSize: 16,
                                               fontWeight: FontWeight.bold,
                                               color: Theme.of(context)
                                                   .colorScheme
@@ -1103,532 +1223,375 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                             ),
                                           ),
                                           Text(
-                                            'Tap to open interactive calendar',
+                                            'Monthly Rent Collection Performance',
                                             style: GoogleFonts.poppins(
                                               fontSize: 11,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // View Calendar Button
-                              OutlinedButton.icon(
-                                onPressed: () =>
-                                    showRampCalendarBottomSheet(context),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF0D6EFD),
-                                  side: const BorderSide(color: Color(0xFF0D6EFD)),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 6),
-                                ),
-                                icon: const Icon(Icons.date_range_rounded, size: 16),
-                                label: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    'Calendar',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          const Divider(height: 1, color: Color(0xFFE2E8F0)),
-                          const SizedBox(height: 12),
-
-                          // Category Color Dots Legend
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                _CalendarLegendDot(color: const Color(0xFF0D6EFD), label: 'Rent Dues'),
-                                const SizedBox(width: 12),
-                                _CalendarLegendDot(color: const Color(0xFFF59E0B), label: 'Maintenance'),
-                                const SizedBox(width: 12),
-                                _CalendarLegendDot(color: const Color(0xFF0EA5E9), label: 'Inspections'),
-                                const SizedBox(width: 12),
-                                _CalendarLegendDot(color: const Color(0xFF10B981), label: 'Custom'),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-
-                          // Upcoming Schedule Events
-                          Consumer(
-                            builder: (context, ref, _) {
-                              final allEvents = ref.watch(unifiedCalendarEventsProvider);
-                              final nowAtMidnight = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-
-                              // Filter upcoming and overdue events
-                              final upcoming = allEvents.where((e) {
-                                final eDate = DateTime(e.date.year, e.date.month, e.date.day);
-                                return !eDate.isBefore(nowAtMidnight) || e.isOverdue;
-                              }).toList()
-                                ..sort((a, b) => a.date.compareTo(b.date));
-
-                              if (upcoming.isEmpty) {
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 12.0),
-                                  child: Text(
-                                    'No upcoming scheduled events.',
-                                    style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
-                                  ),
-                                );
-                              }
-
-                              return Column(
-                                children: upcoming.take(4).map((e) {
-                                  final isDark = Theme.of(context).brightness == Brightness.dark;
-                                  return InkWell(
-                                    onTap: () => showRampCalendarBottomSheet(context),
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Container(
-                                      margin: const EdgeInsets.only(bottom: 8),
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                      decoration: BoxDecoration(
-                                        color: isDark ? const Color(0xFF181A1C) : const Color(0xFFF8F9FA),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: e.isOverdue
-                                              ? Colors.red.withValues(alpha: 0.3)
-                                              : Colors.transparent,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 8,
-                                            height: 8,
-                                            decoration: BoxDecoration(
-                                              color: e.isOverdue ? Colors.red : e.categoryColor,
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 10),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  e.title,
-                                                  style: GoogleFonts.poppins(
-                                                    fontWeight: FontWeight.w600,
-                                                    fontSize: 13,
-                                                    color: Theme.of(context).colorScheme.onSurface,
-                                                  ),
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                                Text(
-                                                  e.categoryLabel,
-                                                  style: GoogleFonts.poppins(
-                                                    fontSize: 10,
-                                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                            decoration: BoxDecoration(
-                                              color: e.categoryColor.withValues(alpha: 0.12),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              DateFormat('MMM dd').format(e.date),
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                                color: e.categoryColor,
-                                              ),
+                                              color: RampColors.mutedText,
                                             ),
                                           ),
                                         ],
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 24),
-
-                    // --- 5. SECTION: [Alert Icon] Due in 7 Days ---
-                    AdaptiveRow(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: Color(0xFFFEF3C7),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.warning_amber_rounded,
-                                color: Color(0xFFD97706),
-                                size: 20,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'Due Soon',
-                              style: GoogleFonts.poppins(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Color(0xFFE8F1FF),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '${upcomingDues.length} Dues',
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0D6EFD),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 12),
-
-                    if (upcomingDues.isEmpty)
-                      RampEmptyState(
-                        title: 'No Rent Dues Pending',
-                        description:
-                            'All tenant accounts are in good standing with no upcoming dues in the next 7 days.',
-                        icon: Icons.task_alt_rounded,
-                        iconColor: RampColors.success,
-                        padding:
-                            EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                      )
-                    else
-                      Column(
-                        children: upcomingDues.map((item) {
-                          final isOverdue = item.isOverdue;
-                          return RampCard(
-                            margin: EdgeInsets.only(bottom: 10),
-                            padding: EdgeInsets.all(14),
-                            child: InkWell(
-                              onTap: () {
-                                final tenant = ref
-                                    .read(tenantProvider)
-                                    .where((t) => t.id == item.tenantId)
-                                    .firstOrNull;
-                                if (tenant != null) {
-                                  Navigator.of(context, rootNavigator: true)
-                                      .push(
-                                    MaterialPageRoute(
-                                      builder: (_) => TenantProfileScreen(
-                                          tenantId: tenant.id),
-                                    ),
-                                  );
-                                } else {
-                                  ref
-                                      .read(bottomNavIndexProvider.notifier)
-                                      .state = 2;
-                                }
-                              },
-                              borderRadius: BorderRadius.circular(16),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 20,
-                                    backgroundColor: isOverdue
-                                        ? Color(0x20EF4444)
-                                        : Color(0x2010B981),
-                                    child: Icon(
-                                      isOverdue
-                                          ? Icons.warning_amber_rounded
-                                          : Icons.schedule_rounded,
-                                      color: isOverdue
-                                          ? Color(0xFFEF4444)
-                                          : Color(0xFF10B981),
-                                      size: 20,
-                                    ),
-                                  ),
-                                  SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.tenantName,
-                                          style: GoogleFonts.poppins(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14),
-                                        ),
-                                        SizedBox(height: 2),
-                                        Text(
-                                          '${item.unitNumber} • ${item.dueStatusText}',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 12,
-                                            color: isOverdue
-                                                ? Color(0xFFEF4444)
-                                                : Colors.grey[700],
-                                            fontWeight: isOverdue
-                                                ? FontWeight.bold
-                                                : FontWeight.normal,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        item.formattedAmount,
-                                        style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 15,
-                                            color: Color(0xFF10B981)),
-                                      ),
-                                      SizedBox(height: 4),
-                                      InkWell(
-                                        onTap: () {
-                                          final tenant = ref
-                                              .read(tenantProvider)
-                                              .where((tenant) =>
-                                                  tenant.id == item.tenantId)
-                                              .firstOrNull;
-                                          Navigator.of(context,
-                                                  rootNavigator: true)
-                                              .push(MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      PaymentsScreen(
-                                                          initialTenant: tenant,
-                                                          openPaymentForm:
-                                                              true)));
-                                        },
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Container(
-                                          padding: EdgeInsets.symmetric(
-                                              horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Color(0xFF0D6EFD),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            'Pay ₱',
-                                            style: GoogleFonts.poppins(
-                                                color: Colors.white,
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold),
-                                          ),
-                                        ),
                                       ),
                                     ],
                                   ),
                                 ],
                               ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
+                              const SizedBox(height: 18),
 
-                    SizedBox(height: 24),
-
-                    // --- 6. SECTION: [Clock Icon] Recent Activity ---
-                    AdaptiveRow(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: Color(0xFFE8F1FF),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.access_time_filled_rounded,
-                                color: Color(0xFF0D6EFD),
-                                size: 20,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'Recent Activity',
-                              style: GoogleFonts.poppins(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          '${activities.length} logged',
-                          style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 12),
-                    RampCard(
-                      padding: EdgeInsets.all(14.0),
-                      child: activities.isEmpty
-                          ? RampEmptyState(
-                              title: 'No Activity Logged',
-                              description:
-                                  'Audit logs and recent tenant activities will automatically appear here.',
-                              icon: Icons.history_rounded,
-                              padding: EdgeInsets.all(16),
-                            )
-                          : ListView.separated(
-                              shrinkWrap: true,
-                              physics: NeverScrollableScrollPhysics(),
-                              itemCount:
-                                  activities.length > 5 ? 5 : activities.length,
-                              separatorBuilder: (_, __) =>
-                                  Divider(height: 16, color: Color(0xFFE2E8F0)),
-                              itemBuilder: (context, index) {
-                                final act = activities[index];
-                                return InkWell(
-                                  onTap: () => _openRecentActivity(act),
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Padding(
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 4),
-                                    child: Row(
+                              // Side-by-Side Content: Circular Progress (Left) + Vertical Stacked Stats (Right)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  // Left: Circular Progress Indicator
+                                  SizedBox(
+                                    width: 80,
+                                    height: 80,
+                                    child: Stack(
+                                      alignment: Alignment.center,
                                       children: [
-                                        CircleAvatar(
-                                          radius: 18,
-                                          backgroundColor: act.iconBgColor,
-                                          child: Icon(act.icon,
-                                              size: 18,
-                                              color: Color(0xFF0D6EFD)),
-                                        ),
-                                        SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                act.title,
-                                                style: GoogleFonts.poppins(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 13),
-                                              ),
-                                              SizedBox(height: 2),
-                                              Text(
-                                                act.description,
-                                                style: GoogleFonts.poppins(
-                                                    color: Theme.of(context)
-                                                        .colorScheme
-                                                        .onSurfaceVariant,
-                                                    fontSize: 12),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ],
+                                        SizedBox.expand(
+                                          child: CircularProgressIndicator(
+                                            value: collectionProgress,
+                                            strokeWidth: 8,
+                                            backgroundColor: isDark
+                                                ? const Color(0xFF334155)
+                                                : const Color(0xFFE2E8F0),
+                                            color: RampColors.primary,
+                                            strokeCap: StrokeCap.round,
                                           ),
                                         ),
-                                        SizedBox(width: 8),
                                         Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.end,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Text(
-                                              act.timeAgo,
-                                              style: GoogleFonts.poppins(
+                                            FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: Text(
+                                                '$collectionPercent%',
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
                                                   color: Theme.of(context)
                                                       .colorScheme
-                                                      .onSurfaceVariant,
-                                                  fontSize: 11),
+                                                      .onSurface,
+                                                ),
+                                              ),
                                             ),
-                                            const SizedBox(height: 4),
-                                            Icon(
-                                              Icons.chevron_right_rounded,
-                                              size: 18,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
+                                            Text(
+                                              'Collected',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 9.5,
+                                                color: RampColors.mutedText,
+                                                fontWeight: FontWeight.w500,
+                                              ),
                                             ),
                                           ],
                                         ),
                                       ],
                                     ),
                                   ),
-                                );
-                              },
+                                  const SizedBox(width: 18),
+
+                                  // Right: Stacked Statistics Vertically
+                                  Expanded(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        _buildFinancialMetricRow(
+                                          icon: Icons.my_location_outlined,
+                                          iconColor: const Color(0xFF6B7280),
+                                          label: 'Target',
+                                          value: _currencyFormat
+                                              .format(targetRevenueVal),
+                                          isDark: isDark,
+                                        ),
+                                        const SizedBox(height: 6),
+                                        _buildFinancialMetricRow(
+                                          icon: Icons
+                                              .check_circle_outline_rounded,
+                                          iconColor: const Color(0xFF10B981),
+                                          label: 'Collected',
+                                          value: _currencyFormat
+                                              .format(totalRevenueCollected),
+                                          isDark: isDark,
+                                        ),
+                                        const SizedBox(height: 6),
+                                        _buildFinancialMetricRow(
+                                          icon: Icons.hourglass_empty_outlined,
+                                          iconColor: pendingDuesVal > 0
+                                              ? const Color(0xFFEF4444)
+                                              : const Color(0xFF10B981),
+                                          label: 'Pending',
+                                          value: _currencyFormat
+                                              .format(pendingDuesVal),
+                                          isDark: isDark,
+                                        ),
+                                        const SizedBox(height: 6),
+                                        _buildFinancialMetricRow(
+                                          icon: Icons
+                                              .account_balance_wallet_outlined,
+                                          iconColor: RampColors.primary,
+                                          label: 'Net NOI',
+                                          value: _currencyFormat
+                                              .format(netOperatingIncomeVal),
+                                          isDark: isDark,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Bottom Deadline Strip
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? const Color(0xFF1E293B)
+                                      : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.event_outlined,
+                                        size: 16, color: RampColors.primary),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Next Due Cycle: ${DateFormat("MMM dd, yyyy").format(DateTime(now.year, now.month + 1, 5))}',
+                                        style: GoogleFonts.poppins(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w500),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+
+                              // Compact "View Full Ledger" Button at the Bottom
+                              SizedBox(
+                                width: double.infinity,
+                                height: 40,
+                                child: OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor:
+                                        Theme.of(context).colorScheme.primary,
+                                    side: BorderSide(
+                                      color: isDark
+                                          ? const Color(0xFF334155)
+                                          : const Color(0xFFE2E8F0),
+                                      width: 1.2,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(22)),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
+                                    minimumSize: const Size(0, 40),
+                                    elevation: 0,
+                                  ),
+                                  icon: const Icon(Icons.receipt_long_outlined,
+                                      size: 16),
+                                  label: Text(
+                                    'View Full Ledger',
+                                    style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13),
+                                  ),
+                                  onPressed: () =>
+                                      Navigator.of(context, rootNavigator: true)
+                                          .push(FadePageRoute(
+                                              page: const PaymentsScreen())),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // --- 3. QUICK MANAGEMENT ACTIONS (HORIZONTAL ROW OF CIRCULAR BUTTONS) ---
+                        Text(
+                          'Manage',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildQuickActionButton(
+                              context: context,
+                              icon: Icons.add_card_outlined,
+                              label: 'Record Payment',
+                              color: RampColors.primary,
+                              bgColor: isDark
+                                  ? const Color(0xFF1E293B)
+                                  : const Color(0xFFE8F1FF),
+                              onTap: () => showRecordPaymentSheet(context, ref),
                             ),
+                            _buildQuickActionButton(
+                              context: context,
+                              icon: Icons.handyman_outlined,
+                              label: 'Maintenance',
+                              color: RampColors.primary,
+                              bgColor: isDark
+                                  ? const Color(0xFF1E293B)
+                                  : const Color(0xFFE8F1FF),
+                              onTap: () =>
+                                  Navigator.of(context, rootNavigator: true)
+                                      .push(
+                                SlideUpFadeRoute(
+                                    page: const TicketFormScreen()),
+                              ),
+                            ),
+                            _buildQuickActionButton(
+                              context: context,
+                              icon: Icons.person_add_outlined,
+                              label: 'Add Tenant',
+                              color: RampColors.primary,
+                              bgColor: isDark
+                                  ? const Color(0xFF1E293B)
+                                  : const Color(0xFFE8F1FF),
+                              onTap: () =>
+                                  Navigator.of(context, rootNavigator: true)
+                                      .push(
+                                SlideUpFadeRoute(
+                                    page: const TenantFormScreen()),
+                              ),
+                            ),
+                            _buildQuickActionButton(
+                              context: context,
+                              icon: Icons.calendar_month_outlined,
+                              label: 'Calendar',
+                              color: RampColors.primary,
+                              bgColor: isDark
+                                  ? const Color(0xFF1E293B)
+                                  : const Color(0xFFE8F1FF),
+                              onTap: () => showRampCalendarBottomSheet(context),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // --- 4. COMBINED TABBED SECTION (SCHEDULE | DUE SOON | RECENT ACTIVITY) ---
+                        DefaultTabController(
+                          length: 3,
+                          child: RampCard(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Standard Material 3 TabBar with Clean Bottom Indicator Line
+                                Container(
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      bottom: BorderSide(
+                                        color: isDark
+                                            ? const Color(0xFF334155)
+                                            : const Color(0xFFE2E8F0),
+                                        width: 1.0,
+                                      ),
+                                    ),
+                                  ),
+                                  child: TabBar(
+                                    indicatorColor: RampColors.primary,
+                                    indicatorWeight: 2.5,
+                                    indicatorSize: TabBarIndicatorSize.tab,
+                                    dividerColor: Colors.transparent,
+                                    labelColor: RampColors.primary,
+                                    unselectedLabelColor: isDark
+                                        ? const Color(0xFF94A3B8)
+                                        : RampColors.mutedText,
+                                    labelStyle: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600),
+                                    unselectedLabelStyle: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500),
+                                    padding: EdgeInsets.zero,
+                                    labelPadding: const EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 8),
+                                    tabs: const [
+                                      Tab(
+                                        height: 38,
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.build_outlined,
+                                                size: 16),
+                                            SizedBox(width: 6),
+                                            Text('Repairs'),
+                                          ],
+                                        ),
+                                      ),
+                                      Tab(
+                                        height: 38,
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.hourglass_empty_outlined,
+                                                size: 16),
+                                            SizedBox(width: 6),
+                                            Text('Due Soon'),
+                                          ],
+                                        ),
+                                      ),
+                                      Tab(
+                                        height: 38,
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.history_outlined,
+                                                size: 16),
+                                            SizedBox(width: 6),
+                                            Text('Activity'),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+
+                                // TabBarView Content (With Minimum 48px Item Height & FadeIn Animation)
+                                SizedBox(
+                                  height: 350,
+                                  child: TabBarView(
+                                    children: [
+                                      _buildUpcomingScheduleTab(
+                                          context, ref, isDark),
+                                      _buildDueSoonTab(
+                                          context, ref, upcomingDues, isDark),
+                                      _buildRecentActivityTab(
+                                          context, ref, activities, isDark),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
-    ).animate().fade(duration: 500.ms).scale(delay: 100.ms);
-  }
-}
-
-class _CalendarLegendDot extends StatelessWidget {
-  const _CalendarLegendDot({required this.color, required this.label});
-
-  final Color color;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-      ],
     );
   }
 }

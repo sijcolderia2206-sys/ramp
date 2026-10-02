@@ -6,10 +6,10 @@ import 'package:intl/intl.dart';
 import '../providers/providers.dart';
 import '../core/widgets/core_widgets.dart';
 import '../core/theme/ramp_theme.dart';
+import '../core/navigation/custom_page_transitions.dart';
 import '../core/services/reminder_launcher_service.dart';
 import 'tenant_form.dart';
 import 'tenant_profile.dart';
-import 'payments_screen.dart';
 
 enum TenantSortOption { name, unit, balance, dueDate }
 
@@ -38,6 +38,9 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
   bool _isLoading = true;
   bool _hasError = false;
 
+  int _currentPage = 1;
+  static const int _pageSize = 20;
+
   @override
   void initState() {
     super.initState();
@@ -60,8 +63,8 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
 
   void _openTenantForm({Tenant? existingTenant}) {
     Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(
-        builder: (_) => TenantFormScreen(existingTenant: existingTenant),
+      SlideUpFadeRoute(
+        page: TenantFormScreen(existingTenant: existingTenant),
       ),
     );
   }
@@ -202,14 +205,11 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
                         await ReminderLauncherService.launchMessenger(
                             messengerHandle: tenant.messengerHandle,
                             message: message);
-                    if (!launched) {
-                      await Clipboard.setData(ClipboardData(text: message));
-                    }
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(launched
-                            ? 'Messenger opened for ${tenant.name}! Health updated.'
+                            ? 'Opening Messenger for ${tenant.name}! Reminder text copied to clipboard.'
                             : 'Reminder copied to clipboard! (Messenger launcher unavailable)'),
                         backgroundColor: const Color(0xFF0084FF),
                         behavior: SnackBarBehavior.floating,
@@ -259,12 +259,48 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
     );
   }
 
+  Future<void> _confirmDeleteTenant(
+      BuildContext context, Tenant tenant) async {
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text('Delete ${tenant.name}?'),
+            content: Text(
+                'Are you sure you want to permanently remove ${tenant.name}? Any assigned unit will be vacated.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('CANCEL'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                    backgroundColor: RampColors.danger),
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('DELETE'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (confirmed && context.mounted) {
+      ref.read(tenantProvider.notifier).deleteTenant(tenant.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${tenant.name} permanently deleted.'),
+          backgroundColor: RampColors.danger,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   DateTime _effectiveTenantDueDate(Tenant tenant) {
     final unit = ref
         .read(unitProvider)
         .where((unit) => unit.id == tenant.unitId)
         .firstOrNull;
-    if (unit == null) return tenant.dueDate;
+    if (unit == null) return tenant.effectiveDueDate;
     final now = DateTime.now();
     final lastDay = DateTime(now.year, now.month + 1, 0).day;
     return DateTime(now.year, now.month, unit.rentDueDay.clamp(1, lastDay));
@@ -277,6 +313,7 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
       ),
     );
   }
+
   Widget _buildTenantCard(Tenant tenant) {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurfaceVariant;
@@ -357,7 +394,8 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
                             ),
                             const SizedBox(width: 6),
                             Tooltip(
-                              message: 'Payer Health: ${tenant.healthStatusText}',
+                              message:
+                                  'Payer Health: ${tenant.healthStatusText} (${tenant.healthScore}/100)',
                               child: Container(
                                 width: 10,
                                 height: 10,
@@ -397,7 +435,8 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
                       ),
                       const SizedBox(height: 5),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: statusColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
@@ -415,7 +454,9 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
                   ),
                   const SizedBox(width: 4),
                   IconButton(
-                    tooltip: isExpanded ? 'Hide quick details' : 'Show quick details',
+                    tooltip: isExpanded
+                        ? 'Hide quick details'
+                        : 'Show quick details',
                     visualDensity: VisualDensity.compact,
                     onPressed: () => setState(() {
                       if (isExpanded) {
@@ -450,7 +491,7 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
                 if (tenant.isAssigned)
                   _tenantDetailLine(
                       'Lease',
-                      '${DateFormat('MMM d, yyyy').format(tenant.leaseStart)} – ${DateFormat('MMM d, yyyy').format(tenant.leaseEnd)}',
+                      '${DateFormat('MMM d, yyyy').format(tenant.effectiveLeaseStart)} – ${DateFormat('MMM d, yyyy').format(tenant.effectiveLeaseEnd)}',
                       muted,
                       text),
                 const SizedBox(height: 10),
@@ -495,6 +536,12 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
                       tooltip: 'Open full tenant record',
                       onPressed: () => _openTenantProfile(tenant),
                       icon: const Icon(Icons.open_in_new_rounded, size: 19),
+                    ),
+                    IconButton(
+                      tooltip: 'Delete tenant',
+                      onPressed: () => _confirmDeleteTenant(context, tenant),
+                      icon: const Icon(Icons.delete_outline_rounded,
+                          size: 19, color: RampColors.danger),
                     ),
                   ],
                 ),
@@ -566,8 +613,16 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
     } else if (_sortOption == TenantSortOption.balance) {
       displayTenants.sort((a, b) => b.balance.compareTo(a.balance));
     } else if (_sortOption == TenantSortOption.dueDate) {
-      displayTenants.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+      displayTenants
+          .sort((a, b) => a.effectiveDueDate.compareTo(b.effectiveDueDate));
     }
+
+    // Pagination calculations (20 per page)
+    final totalPages = (displayTenants.length / _pageSize).ceil().clamp(1, 999);
+    final currentPageClamped = _currentPage.clamp(1, totalPages);
+    final startIndex = (currentPageClamped - 1) * _pageSize;
+    final paginatedTenants =
+        displayTenants.skip(startIndex).take(_pageSize).toList();
 
     final lateCount = allTenants.where((t) => !t.isArchived && t.isLate).length;
     final dueSoonCount =
@@ -796,6 +851,7 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
                                   setState(() {
                                     _searchQuery = '';
                                     _selectedFilter = 'All';
+                                    _currentPage = 1;
                                   });
                                 } else {
                                   _openTenantForm();
@@ -803,18 +859,92 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
                               },
                             )
                           : Column(
-                              children:
-                                  List.generate(displayTenants.length, (index) {
-                                final tenant = displayTenants[index];
+                              children: [
+                                ...List.generate(paginatedTenants.length,
+                                    (index) {
+                                  final tenant = paginatedTenants[index];
 
-                                return StaggeredListItem(
-                                  index: index,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(bottom: 16),
-                                    child: _buildTenantCard(tenant),
+                                  return StaggeredListItem(
+                                    index: index,
+                                    child: Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 16),
+                                      child: _buildTenantCard(tenant),
+                                    ),
+                                  );
+                                }),
+
+                                // 20-Items-Per-Page Pagination Bar
+                                if (displayTenants.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? const Color(0xFF1E293B)
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: isDark
+                                            ? const Color(0xFF334155)
+                                            : RampColors.border,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            'Showing ${startIndex + 1}–${(startIndex + paginatedTenants.length)} of ${displayTenants.length}',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: isDark
+                                                      ? Colors.grey.shade300
+                                                      : RampColors.slate,
+                                                ),
+                                          ),
+                                        ),
+                                        Row(
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(
+                                                  Icons.chevron_left_rounded),
+                                              tooltip: 'Previous Page',
+                                              onPressed: currentPageClamped > 1
+                                                  ? () => setState(
+                                                      () => _currentPage--)
+                                                  : null,
+                                            ),
+                                            Text(
+                                              'Page $currentPageClamped of $totalPages',
+                                              style: GoogleFonts.poppins(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                                color: RampColors.primary,
+                                              ),
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(
+                                                  Icons.chevron_right_rounded),
+                                              tooltip: 'Next Page',
+                                              onPressed: currentPageClamped <
+                                                      totalPages
+                                                  ? () => setState(
+                                                      () => _currentPage++)
+                                                  : null,
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                );
-                              }),
+                                ],
+                              ],
                             ),
                   ],
                 ),

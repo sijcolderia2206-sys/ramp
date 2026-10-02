@@ -29,7 +29,8 @@ class GeoPointLocation {
 
   factory GeoPointLocation.fromJson(Map<String, dynamic> json) {
     return GeoPointLocation(
-      latitude: (json['latitude'] as num?)?.toDouble() ?? 14.2713, // Default Pagsanjan
+      latitude: (json['latitude'] as num?)?.toDouble() ??
+          14.2713, // Default Pagsanjan
       longitude: (json['longitude'] as num?)?.toDouble() ?? 121.4243,
       heading: (json['heading'] as num?)?.toDouble() ?? 0.0,
       speed: (json['speed'] as num?)?.toDouble() ?? 0.0,

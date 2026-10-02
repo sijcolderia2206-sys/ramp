@@ -17,7 +17,8 @@ class HelpCenterScreen extends StatelessWidget {
             children: [
               Padding(
                 padding: EdgeInsets.all(12.0),
-                child: Text('Navigate to Payments screen, click "Record Payment", select the tenant and enter amount and reference.'),
+                child: Text(
+                    'Navigate to Payments screen, click "Record Payment", select the tenant and enter amount and reference.'),
               ),
             ],
           ),
@@ -26,7 +27,8 @@ class HelpCenterScreen extends StatelessWidget {
             children: [
               Padding(
                 padding: EdgeInsets.all(12.0),
-                child: Text('Go to Units screen, click "+ Add Unit" and fill out unit details and monthly rent.'),
+                child: Text(
+                    'Go to Units screen, click "+ Add Unit" and fill out unit details and monthly rent.'),
               ),
             ],
           ),

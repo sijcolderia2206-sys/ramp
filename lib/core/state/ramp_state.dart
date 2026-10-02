@@ -9,6 +9,7 @@ import '../services/firestore_service.dart';
 import '../services/supabase_service.dart';
 import '../services/persistence_queue.dart';
 import '../services/audit_service.dart';
+import '../services/user_database_service.dart';
 
 export '../../models/models.dart';
 
@@ -99,7 +100,7 @@ class RampState {
     final threeDaysLater = now.add(const Duration(days: 3));
     return payments.where((p) {
       if (p.isPaid) return false;
-      return p.paymentDate.isBefore(threeDaysLater);
+      return p.effectivePaymentDate.isBefore(threeDaysLater);
     }).toList();
   }
 
@@ -750,8 +751,19 @@ final rampProvider = StateNotifierProvider<RampNotifier, RampState>(
   (ref) => RampNotifier(),
 );
 
+final currentUserProvider = StateProvider<RampUser?>((ref) => null);
+
 final currentRoleProvider = Provider<String>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user != null) {
+    return user.role.value;
+  }
   return ref.watch(rampProvider).currentRole;
+});
+
+final userRoleEnumProvider = Provider<UserRole>((ref) {
+  final roleStr = ref.watch(currentRoleProvider);
+  return UserRole.fromString(roleStr);
 });
 
 final activeNavIndexProvider = Provider<int>((ref) {
@@ -931,6 +943,8 @@ void _saveTenant(Tenant tenant) => _persist('tenants', tenant.id, {
       'isArchived': tenant.isArchived,
       'avatarUrl': tenant.avatarUrl,
       'currentTenancyId': tenant.currentTenancyId,
+      'messengerHandle': tenant.messengerHandle,
+      'reminderLogs': tenant.reminderLogs.map((l) => l.toJson()).toList(),
       'schemaVersion': 2,
     });
 
@@ -1052,7 +1066,8 @@ void _saveTenantDocument(TenantDocument item) =>
     });
 
 class UnitNotifier extends StateNotifier<List<Unit>> {
-  UnitNotifier()
+  final Ref? _ref;
+  UnitNotifier([this._ref])
       : super([
           Unit(
             id: 'u1',
@@ -1179,6 +1194,10 @@ class UnitNotifier extends StateNotifier<List<Unit>> {
   void addUnit(Unit unit) {
     state = [...state, unit];
     _saveUnit(unit);
+    _ref?.read(auditServiceProvider.notifier).logAction(
+          'UNIT_CREATED',
+          'Created property ${unit.name} (${unit.unitNumber})',
+        );
   }
 
   void updateUnit(Unit updatedUnit) {
@@ -1187,6 +1206,10 @@ class UnitNotifier extends StateNotifier<List<Unit>> {
         if (unit.id == updatedUnit.id) updatedUnit else unit
     ];
     _saveUnit(updatedUnit);
+    _ref?.read(auditServiceProvider.notifier).logAction(
+          'UNIT_UPDATED',
+          'Updated details for property ${updatedUnit.name}',
+        );
   }
 
   void archiveUnit(String id) {
@@ -1198,19 +1221,35 @@ class UnitNotifier extends StateNotifier<List<Unit>> {
           unit
     ];
     final updated = state.where((unit) => unit.id == id).firstOrNull;
-    if (updated != null) _saveUnit(updated);
+    if (updated != null) {
+      _saveUnit(updated);
+      _ref?.read(auditServiceProvider.notifier).logAction(
+            'UNIT_ARCHIVED',
+            'Archived property ${updated.name}',
+          );
+    }
   }
 
   void deleteUnit(String id) {
+    final unit = state.firstWhere((u) => u.id == id, orElse: () => state.first);
     state = state.where((unit) => unit.id != id).toList();
     _deletePersisted('units', id);
+    _ref?.read(auditServiceProvider.notifier).logAction(
+          'UNIT_DELETED',
+          'Deleted property ${unit.name} (${unit.id})',
+        );
   }
 
   void markVacant(String id) {
     state = [
       for (final unit in state)
         if (unit.id == id)
-          unit.copyWith(status: 'Vacant', clearTenantAssignment: true)
+          unit.copyWith(
+            status: 'Vacant',
+            tenantId: null,
+            tenantName: null,
+            currentTenancyId: null,
+          )
         else
           unit
     ];
@@ -1220,7 +1259,7 @@ class UnitNotifier extends StateNotifier<List<Unit>> {
 }
 
 final unitProvider =
-    StateNotifierProvider<UnitNotifier, List<Unit>>((ref) => UnitNotifier());
+    StateNotifierProvider<UnitNotifier, List<Unit>>((ref) => UnitNotifier(ref));
 
 class TenantNotifier extends StateNotifier<List<Tenant>> {
   final Ref? _ref;
@@ -1275,6 +1314,25 @@ class TenantNotifier extends StateNotifier<List<Tenant>> {
   void addTenant(Tenant tenant) {
     state = [...state, tenant];
     _saveTenant(tenant);
+
+    if (_ref != null && tenant.isAssigned) {
+      final unit = _ref!
+          .read(unitProvider)
+          .where((u) => u.id == tenant.unitId)
+          .firstOrNull;
+      if (unit != null) {
+        _ref!.read(unitProvider.notifier).updateUnit(unit.copyWith(
+              status: 'Occupied',
+              tenantId: tenant.id,
+              tenantName: tenant.name,
+            ));
+      }
+    }
+
+    _ref?.read(auditServiceProvider.notifier).logAction(
+          'TENANT_CREATED',
+          'Registered tenant ${tenant.name} (${tenant.id})',
+        );
   }
 
   void recordPayment(String tenantId, double amount) {
@@ -1302,10 +1360,40 @@ class TenantNotifier extends StateNotifier<List<Tenant>> {
     final tenantPayments = allPayments.where((p) =>
         (p.tenantId == tenantId ||
             p.tenantName.toLowerCase() == tenant.name.toLowerCase()) &&
-        p.isPaid && p.isRent);
+        p.isPaid &&
+        p.isRent);
 
     final totalPaid = tenantPayments.fold(0.0, (sum, p) => sum + p.amount);
-    final totalExpected = tenant.monthlyRent; // Current monthly rent charge
+
+    // Itemized Billing Engine: Formula = Base Rent + Water Usage (PHP 45.00 per cu.m) + Electric Usage (PHP 12.50 per kWh) + Late Fees
+    final unit = _ref!
+        .read(unitProvider)
+        .where((u) => u.id == tenant.unitId)
+        .firstOrNull;
+    final rates = _ref!.read(utilityRateProvider);
+
+    double waterCharge = 0.0;
+    double electricCharge = 0.0;
+    double lateFee = 0.0;
+
+    if (unit != null) {
+      if (unit.waterUtilityEnabled) {
+        waterCharge =
+            unit.waterUsage * unit.effectiveWaterRate(rates.waterRate);
+      }
+      if (unit.electricityUtilityEnabled) {
+        electricCharge = unit.electricUsage *
+            unit.effectiveElectricityRate(rates.electricityRate);
+      }
+      if (tenant.isLate) {
+        lateFee = unit.lateFee;
+      }
+    } else if (tenant.isLate) {
+      lateFee = _ref!.read(lateFeeAmountProvider);
+    }
+
+    final totalExpected =
+        tenant.monthlyRent + waterCharge + electricCharge + lateFee;
     final double newBalance =
         (totalExpected - totalPaid).clamp(0, double.infinity).toDouble();
 
@@ -1318,11 +1406,39 @@ class TenantNotifier extends StateNotifier<List<Tenant>> {
   }
 
   void updateTenant(Tenant updatedTenant) {
+    final previousTenant =
+        state.where((t) => t.id == updatedTenant.id).firstOrNull;
+
     state = [
       for (final tenant in state)
         if (tenant.id == updatedTenant.id) updatedTenant else tenant
     ];
     _saveTenant(updatedTenant);
+
+    if (_ref != null && previousTenant != null) {
+      if (previousTenant.unitId.isNotEmpty &&
+          previousTenant.unitId != updatedTenant.unitId) {
+        _ref!.read(unitProvider.notifier).markVacant(previousTenant.unitId);
+      }
+      if (updatedTenant.unitId.isNotEmpty) {
+        final newUnit = _ref!
+            .read(unitProvider)
+            .where((u) => u.id == updatedTenant.unitId)
+            .firstOrNull;
+        if (newUnit != null) {
+          _ref!.read(unitProvider.notifier).updateUnit(newUnit.copyWith(
+                status: 'Occupied',
+                tenantId: updatedTenant.id,
+                tenantName: updatedTenant.name,
+              ));
+        }
+      }
+    }
+
+    _ref?.read(auditServiceProvider.notifier).logAction(
+          'TENANT_UPDATED',
+          'Updated tenant details for ${updatedTenant.name}',
+        );
   }
 
   void applyAutoLateFee(String tenantId, double fee) {
@@ -1346,6 +1462,10 @@ class TenantNotifier extends StateNotifier<List<Tenant>> {
               iconBgColor: const Color(0x33EF4444),
             ),
           );
+      _ref!.read(auditServiceProvider.notifier).logAction(
+            'LATE_FEE_APPLIED',
+            'Auto late fee ₱${fee.toInt()} applied to tenant ID $tenantId',
+          );
     }
   }
 
@@ -1358,7 +1478,13 @@ class TenantNotifier extends StateNotifier<List<Tenant>> {
           tenant
     ];
     final updated = state.where((tenant) => tenant.id == id).firstOrNull;
-    if (updated != null) _saveTenant(updated);
+    if (updated != null) {
+      _saveTenant(updated);
+      _ref?.read(auditServiceProvider.notifier).logAction(
+            'TENANT_ARCHIVED',
+            'Archived tenant ${updated.name}',
+          );
+    }
   }
 
   void incrementTenantReminder(String tenantId, {String channel = 'SMS'}) {
@@ -1395,12 +1521,27 @@ class TenantNotifier extends StateNotifier<List<Tenant>> {
           tenant
     ];
     final updated = state.where((tenant) => tenant.id == id).firstOrNull;
-    if (updated != null) _saveTenant(updated);
+    if (updated != null) {
+      _saveTenant(updated);
+      _ref?.read(auditServiceProvider.notifier).logAction(
+            'TENANT_RESTORED',
+            'Restored tenant ${updated.name} from archive',
+          );
+    }
   }
 
   void deleteTenant(String id) {
-    state = state.where((tenant) => tenant.id != id).toList();
+    final tenant =
+        state.firstWhere((t) => t.id == id, orElse: () => state.first);
+    if (_ref != null && tenant.unitId.isNotEmpty) {
+      _ref!.read(unitProvider.notifier).markVacant(tenant.unitId);
+    }
+    state = state.where((t) => t.id != id).toList();
     _deletePersisted('tenants', id);
+    _ref?.read(auditServiceProvider.notifier).logAction(
+          'TENANT_DELETED',
+          'Deleted tenant ${tenant.name} (${tenant.id})',
+        );
   }
 }
 
@@ -1526,11 +1667,57 @@ class TicketNotifier extends StateNotifier<List<Ticket>> {
   }
 
   void updateTicket(Ticket updatedTicket) {
+    final oldTicket = state.where((t) => t.id == updatedTicket.id).firstOrNull;
     state = [
       for (final ticket in state)
         if (ticket.id == updatedTicket.id) updatedTicket else ticket
     ];
     _saveTicket(updatedTicket);
+
+    if (updatedTicket.estimatedCost > 0 || updatedTicket.actualCost > 0) {
+      final costVal = updatedTicket.cost;
+      final maintenancePayment = PaymentData(
+        id: 'maintenance_${updatedTicket.id}',
+        month: DateFormat('MMM').format(DateTime.now()),
+        amount: costVal,
+        paymentMethod: 'Maintenance',
+        method: 'Maintenance',
+        date: DateTime.now(),
+        paymentDate: DateTime.now(),
+        status: 'Recorded',
+        unitId: updatedTicket.unitId ?? 'u1',
+        unitNumber: updatedTicket.unitNumber,
+        tenantId: updatedTicket.tenantId ?? '',
+        tenantName: updatedTicket.tenantName.isNotEmpty
+            ? updatedTicket.tenantName
+            : 'Property maintenance',
+        referenceNumber:
+            'MAINT-${updatedTicket.id.substring(0, updatedTicket.id.length.clamp(0, 6))}',
+        remarks:
+            'Maintenance Repair (${updatedTicket.category}): ${updatedTicket.title}',
+        baseRent: 0,
+        otherCharge: costVal,
+        transactionType: 'Maintenance',
+        ticketId: updatedTicket.id,
+      );
+      _ref
+          .read(paymentProvider.notifier)
+          .upsertMaintenanceLedger(maintenancePayment);
+    }
+
+    if (oldTicket != null && oldTicket.status != updatedTicket.status) {
+      _ref.read(activityProvider.notifier).addActivity(
+            ActivityLog(
+              id: 'act_${DateTime.now().millisecondsSinceEpoch}',
+              title: 'Ticket Updated',
+              description:
+                  '${updatedTicket.title} status changed to ${updatedTicket.status}',
+              timestamp: DateTime.now(),
+              icon: Icons.edit_note_rounded,
+              iconBgColor: const Color(0x333B82F6),
+            ),
+          );
+    }
   }
 
   bool scheduleTicketVisit(
@@ -1764,8 +1951,23 @@ class TicketNotifier extends StateNotifier<List<Ticket>> {
   }
 
   void deleteTicket(String id) {
-    state = state.where((ticket) => ticket.id != id).toList();
+    final ticket = state.where((t) => t.id == id).firstOrNull;
+    state = state.where((item) => item.id != id).toList();
     _deletePersisted('maintenanceTickets', id);
+
+    if (ticket != null) {
+      _ref.read(activityProvider.notifier).addActivity(
+            ActivityLog(
+              id: 'act_${DateTime.now().millisecondsSinceEpoch}',
+              title: 'Ticket Deleted',
+              description:
+                  'Maintenance ticket "${ticket.title}" (${ticket.unitNumber}) deleted',
+              timestamp: DateTime.now(),
+              icon: Icons.delete_outline_rounded,
+              iconBgColor: const Color(0x33EF4444),
+            ),
+          );
+    }
   }
 }
 
@@ -1933,7 +2135,8 @@ class PaymentNotifier extends StateNotifier<List<PaymentData>> {
     final dueDay = (unit?.rentDueDay ?? _ref.read(dueDateDayProvider)) ?? 5;
     final configuredLateFee =
         (unit?.lateFee ?? _ref.read(lateFeeAmountProvider)) ?? 0.0;
-    final bool isLate = payment.date.day > dueDay && configuredLateFee > 0;
+    final bool isLate =
+        payment.effectiveDate.day > dueDay && configuredLateFee > 0;
     final double finalAmount = payment.amount;
 
     if (isLate) {
@@ -2041,7 +2244,9 @@ class PaymentNotifier extends StateNotifier<List<PaymentData>> {
             item.name.toLowerCase() == approvedPayment.tenantName.toLowerCase())
         .firstOrNull;
     if (tenant != null) {
-      _ref.read(tenantProvider.notifier).recordPayment(tenant.id, approvedPayment.amount);
+      _ref
+          .read(tenantProvider.notifier)
+          .recordPayment(tenant.id, approvedPayment.amount);
     }
 
     final formatter =
@@ -2353,12 +2558,9 @@ void persistAppSettings({
   _persist('settings', 'app', values);
 }
 
-final darkModeProvider = StateProvider<bool>((ref) => false);
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
 
-final themeModeProvider = Provider<ThemeMode>((ref) {
-  final isDark = ref.watch(darkModeProvider);
-  return isDark ? ThemeMode.dark : ThemeMode.light;
-});
+final darkModeProvider = StateProvider<bool>((ref) => false);
 
 final lateFeeAmountProvider = StateProvider<double>((ref) => 500.0);
 final dueDateDayProvider = StateProvider<int>((ref) => 5);
@@ -2569,12 +2771,14 @@ final upcomingDues7DaysProvider = Provider<List<UpcomingDueItem>>((ref) {
 
   final tenants = ref.watch(tenantProvider);
   final payments = ref.watch(paymentProvider);
+  final units = ref.watch(unitProvider);
+  final rates = ref.watch(utilityRateProvider);
 
   final List<UpcomingDueItem> items = [];
 
   for (final p in payments) {
-    final pDate =
-        DateTime(p.paymentDate.year, p.paymentDate.month, p.paymentDate.day);
+    final pDate = DateTime(p.effectivePaymentDate.year,
+        p.effectivePaymentDate.month, p.effectivePaymentDate.day);
     final days = pDate.difference(today).inDays;
     if (!p.isPaid && days <= 7) {
       items.add(
@@ -2584,7 +2788,7 @@ final upcomingDues7DaysProvider = Provider<List<UpcomingDueItem>>((ref) {
           tenantName: p.tenantName,
           unitNumber: p.unitNumber,
           amount: p.amount,
-          dueDate: p.paymentDate,
+          dueDate: p.effectivePaymentDate,
           status: days < 0 ? 'Overdue' : (days == 0 ? 'Due Today' : 'Upcoming'),
         ),
       );
@@ -2592,18 +2796,42 @@ final upcomingDues7DaysProvider = Provider<List<UpcomingDueItem>>((ref) {
   }
 
   for (final t in tenants) {
-    final tDue = DateTime(t.dueDate.year, t.dueDate.month, t.dueDate.day);
+    final tDue = DateTime(t.effectiveDueDate.year, t.effectiveDueDate.month,
+        t.effectiveDueDate.day);
     final days = tDue.difference(today).inDays;
     if (days <= 7 &&
         !items.any((i) => i.tenantName.toLowerCase() == t.name.toLowerCase())) {
+      final unit = units.where((u) => u.id == t.unitId).firstOrNull;
+      double waterCharge = 0.0;
+      double electricCharge = 0.0;
+      double lateFee = 0.0;
+
+      if (unit != null) {
+        if (unit.waterUtilityEnabled) {
+          waterCharge =
+              unit.waterUsage * unit.effectiveWaterRate(rates.waterRate);
+        }
+        if (unit.electricityUtilityEnabled) {
+          electricCharge = unit.electricUsage *
+              unit.effectiveElectricityRate(rates.electricityRate);
+        }
+        if (t.isLate) {
+          lateFee = unit.lateFee;
+        }
+      } else if (t.isLate) {
+        lateFee = ref.watch(lateFeeAmountProvider);
+      }
+      final calculatedExpected =
+          t.monthlyRent + waterCharge + electricCharge + lateFee;
+
       items.add(
         UpcomingDueItem(
           id: 'due_${t.id}',
           tenantId: t.id,
           tenantName: t.name,
           unitNumber: t.unitNumber,
-          amount: t.balance > 0 ? t.balance : t.monthlyRent,
-          dueDate: t.dueDate,
+          amount: t.balance > 0 ? t.balance : calculatedExpected,
+          dueDate: t.effectiveDueDate,
           status: days < 0 ? 'Overdue' : (days == 0 ? 'Due Today' : 'Upcoming'),
         ),
       );
@@ -2616,10 +2844,9 @@ final upcomingDues7DaysProvider = Provider<List<UpcomingDueItem>>((ref) {
 
 final kpiTotalRevenueProvider = Provider<double>((ref) {
   final payments = ref.watch(paymentProvider);
-  final total =
-      payments
-          .where((p) => p.isRent && p.isPaid)
-          .fold(0.0, (sum, p) => sum + p.amount);
+  final total = payments
+      .where((p) => p.isRent && p.isPaid)
+      .fold(0.0, (sum, p) => sum + p.amount);
   return total > 0 ? total : 42375.0;
 });
 
@@ -2898,11 +3125,32 @@ Future<void> hydratePersistentAppData(WidgetRef ref) async {
   final supabase = SupabaseService();
   final firestore = FirestoreService();
 
+  // Hydrate user profile & role directly from database
+  final uid = ref.read(authProvider);
+  if (uid != null && uid.isNotEmpty) {
+    try {
+      final userDbService = UserDatabaseService();
+      final userResult = await userDbService.getUserProfile(uid);
+      if (userResult.isSuccess && userResult.dataOrNull != null) {
+        final rampUser = userResult.dataOrNull!;
+        ref.read(rampProvider.notifier).setRole(rampUser.role.value);
+        ref.read(currentUserProvider.notifier).state = rampUser;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error hydrating user profile from database: $e');
+    }
+  }
+
   Future<List<Map<String, dynamic>>> fetchCollection(String name) async {
     final supaResult = await supabase.loadTable(name);
     final supaData = supaResult.dataOrNull ?? [];
     if (supaData.isNotEmpty) return supaData;
-    return await firestore.loadCollection(name);
+    if (supaResult.isFailure) {
+      debugPrint(
+          '⚠️ Supabase loadTable [$name] failed, attempting Firestore emergency fallback...');
+      return await firestore.loadCollection(name);
+    }
+    return supaData;
   }
 
   final results = await Future.wait([
@@ -3007,8 +3255,10 @@ Future<void> hydratePersistentAppData(WidgetRef ref) async {
         _dbBool(settings, 'autoLateFeeEnabled', true);
     ref.read(autoBackupProvider.notifier).state =
         _dbBool(settings, 'autoBackupEnabled', true);
-    ref.read(darkModeProvider.notifier).state =
-        _dbBool(settings, 'darkMode', false);
+    final isDark = _dbBool(settings, 'darkMode', false);
+    ref.read(themeModeProvider.notifier).state =
+        isDark ? ThemeMode.dark : ThemeMode.light;
+    ref.read(darkModeProvider.notifier).state = isDark;
     ref.read(landlordProfileProvider.notifier).state = (
       name: _dbText(settings, 'landlordName', "Emin and Mila's"),
       role:

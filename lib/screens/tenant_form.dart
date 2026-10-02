@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import '../core/services/user_database_service.dart';
 import '../core/theme/ramp_theme.dart';
 import '../core/validation/app_validators.dart';
 import '../providers/providers.dart';
@@ -20,6 +21,7 @@ class TenantFormScreen extends ConsumerStatefulWidget {
 class _TenantFormScreenState extends ConsumerState<TenantFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameCtrl;
+  late final TextEditingController _emailCtrl;
   late final TextEditingController _phoneCtrl;
   late final TextEditingController _addressCtrl;
   late final TextEditingController _referralCtrl;
@@ -45,6 +47,7 @@ class _TenantFormScreenState extends ConsumerState<TenantFormScreen> {
     super.initState();
     final tenant = widget.existingTenant;
     _nameCtrl = TextEditingController(text: tenant?.name ?? '');
+    _emailCtrl = TextEditingController(text: tenant?.email ?? '');
     _phoneCtrl = TextEditingController(text: tenant?.phone ?? '');
     _addressCtrl = TextEditingController(text: tenant?.address ?? '');
     _referralCtrl = TextEditingController(text: tenant?.referral ?? '');
@@ -55,20 +58,24 @@ class _TenantFormScreenState extends ConsumerState<TenantFormScreen> {
         TextEditingController(text: tenant?.monthlyRent.toString() ?? '');
     _balanceCtrl =
         TextEditingController(text: tenant?.balance.toString() ?? '0');
-    _leaseStart = tenant?.leaseStart.isBefore(_minimumTenantDate) == true
-        ? _minimumTenantDate
-        : (tenant?.leaseStart ?? DateTime.now());
-    _leaseEnd = tenant?.leaseEnd.isBefore(_minimumTenantDate) == true
+    _leaseStart =
+        tenant?.effectiveLeaseStart.isBefore(_minimumTenantDate) == true
+            ? _minimumTenantDate
+            : (tenant?.effectiveLeaseStart ?? DateTime.now());
+    _leaseEnd = tenant?.effectiveLeaseEnd.isBefore(_minimumTenantDate) == true
         ? _minimumTenantDate.add(const Duration(days: 365))
-        : (tenant?.leaseEnd ?? DateTime.now().add(const Duration(days: 365)));
-    _dueDate = tenant?.dueDate.isBefore(_minimumTenantDate) == true
+        : (tenant?.effectiveLeaseEnd ??
+            DateTime.now().add(const Duration(days: 365)));
+    _dueDate = tenant?.effectiveDueDate.isBefore(_minimumTenantDate) == true
         ? _minimumTenantDate
-        : (tenant?.dueDate ?? DateTime.now().add(const Duration(days: 5)));
+        : (tenant?.effectiveDueDate ??
+            DateTime.now().add(const Duration(days: 5)));
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _addressCtrl.dispose();
     _referralCtrl.dispose();
@@ -147,18 +154,15 @@ class _TenantFormScreenState extends ConsumerState<TenantFormScreen> {
       id: widget.existingTenant?.id ??
           't_${DateTime.now().millisecondsSinceEpoch}',
       name: name,
-      email: '',
+      email: _emailCtrl.text.trim().toLowerCase(),
       phone: _phoneCtrl.text.trim(),
       address: _addressCtrl.text.trim(),
       referral: _referralCtrl.text.trim(),
       messengerHandle: _messengerCtrl.text.trim(),
-      reminderCount: widget.existingTenant?.reminderCount ?? 0,
-      unitId: _isEditing ? (selectedUnit?.id ?? '') : '',
-      unitNumber: _isEditing
-          ? (selectedUnit?.unitNumber ?? 'Unassigned')
-          : 'Unassigned',
-      monthlyRent: _isEditing && selectedUnit != null ? rent : 0,
-      balance: _isEditing && selectedUnit != null ? balance : 0,
+      unitId: selectedUnit?.id ?? '',
+      unitNumber: selectedUnit?.unitNumber ?? 'Unassigned',
+      monthlyRent: selectedUnit != null ? rent : 0,
+      balance: selectedUnit != null ? balance : 0,
       leaseStart: _leaseStart,
       leaseEnd: _leaseEnd,
       dueDate: _dueDate,
@@ -168,23 +172,40 @@ class _TenantFormScreenState extends ConsumerState<TenantFormScreen> {
     );
 
     if (_isEditing) {
-      final previousUnitId = widget.existingTenant!.unitId;
       ref.read(tenantProvider.notifier).updateTenant(tenant);
-      if (previousUnitId.isNotEmpty && previousUnitId != selectedUnit?.id) {
-        ref.read(unitProvider.notifier).markVacant(previousUnitId);
-      }
-      if (selectedUnit != null) {
-        ref.read(unitProvider.notifier).updateUnit(selectedUnit.copyWith(
-              status: 'Occupied',
-              tenantId: tenant.id,
-              tenantName: tenant.name,
-            ));
-      }
     } else {
       ref.read(tenantProvider.notifier).addTenant(tenant);
     }
+
+    // Auto-create/sync account profile for tenant with default password "tenant123"
+    try {
+      UserDatabaseService().ensureTenantUserAccount(
+        tenantId: tenant.id,
+        tenantName: tenant.name,
+        email: tenant.email,
+        mustChangePassword: true,
+      );
+    } catch (e) {
+      debugPrint('ℹ️ UserDatabaseService ensureTenantUserAccount notice: $e');
+    }
+
     if (!mounted) return;
     Navigator.pop(context, true);
+
+    final displayEmail =
+        tenant.email.isNotEmpty ? tenant.email : 'tenant_${tenant.id}@ramp.local';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _isEditing
+              ? 'Tenant profile updated.'
+              : 'Tenant added! Account initialized ($displayEmail) with default password: tenant123',
+        ),
+        backgroundColor: RampColors.success,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   void _showError(String message) {
@@ -371,9 +392,15 @@ class _TenantFormScreenState extends ConsumerState<TenantFormScreen> {
                               keyboardType: TextInputType.phone,
                               validator: AppValidators.philippinePhone),
                           const SizedBox(height: 16),
-                          _field('Facebook / Messenger Username (optional)', _messengerCtrl),
+                          _field('Facebook / Messenger Username (optional)',
+                              _messengerCtrl),
                           const SizedBox(height: 16),
                           _field('Referral (optional)', _referralCtrl),
+                          const SizedBox(height: 16),
+                          _field('Email Address (optional)', _emailCtrl,
+                              keyboardType: TextInputType.emailAddress,
+                              validator: (v) =>
+                                  AppValidators.email(v, required: false)),
                         ]),
                         if (_isEditing) ...[
                           const SizedBox(height: 20),

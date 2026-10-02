@@ -1,11 +1,14 @@
 // lib/screens/tenant_portal_screen.dart
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../core/services/receipt_ocr_service.dart';
+import '../core/services/user_database_service.dart';
 import '../core/theme/ramp_theme.dart';
+import '../core/validation/app_validators.dart';
 import '../providers/providers.dart';
 import '../core/widgets/core_widgets.dart';
 import '../widgets/receipt_modal.dart';
@@ -18,7 +21,7 @@ class TenantPortalScreen extends ConsumerStatefulWidget {
 }
 
 class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
-  String _selectedTenantId = 't1'; // Default to Maria Santos for demo
+  String _selectedTenantId = 't1'; // Default fallback for preview
 
   final currencyFormatter = NumberFormat.currency(
     locale: 'en_PH',
@@ -27,32 +30,216 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkMustChangePassword();
+    });
+  }
+
+  void _checkMustChangePassword() {
+    final currentUser = ref.read(currentUserProvider);
+    if (currentUser != null && currentUser.mustChangePassword) {
+      _showMandatoryChangePasswordDialog(currentUser);
+    }
+  }
+
+  void _showMandatoryChangePasswordDialog(RampUser user) {
+    final newPassCtrl = TextEditingController();
+    final confirmPassCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setModalState) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            title: Row(
+              children: [
+                const Icon(Icons.lock_reset_rounded,
+                    color: RampColors.primary, size: 24),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Change Default Password',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Welcome to RAMP! Your account was initialized with a temporary default password (tenant123). Please set a new secure password to continue.',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: newPassCtrl,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'New Password',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.lock_outline_rounded),
+                    ),
+                    validator: AppValidators.password,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: confirmPassCtrl,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirm New Password',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.lock_outline_rounded),
+                    ),
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return 'Please confirm your new password.';
+                      }
+                      if (val.trim() != newPassCtrl.text.trim()) {
+                        return 'Passwords do not match.';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: RampColors.primary,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                icon: isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.check_circle_rounded, size: 18),
+                label: Text(isSaving ? 'UPDATING...' : 'SAVE NEW PASSWORD'),
+                onPressed: isSaving
+                    ? null
+                    : () async {
+                        if (!(formKey.currentState?.validate() ?? false)) {
+                          return;
+                        }
+
+                        setModalState(() => isSaving = true);
+                        final newPass = newPassCtrl.text.trim();
+
+                        try {
+                          final firebaseUser =
+                              FirebaseAuth.instance.currentUser;
+                          if (firebaseUser != null) {
+                            await firebaseUser.updatePassword(newPass);
+                          }
+                        } catch (e) {
+                          debugPrint('ℹ️ Auth password update notice: $e');
+                        }
+
+                        await UserDatabaseService()
+                            .clearMustChangePassword(user.uid);
+
+                        final updatedUser =
+                            user.copyWith(mustChangePassword: false);
+                        ref.read(currentUserProvider.notifier).state =
+                            updatedUser;
+
+                        if (!context.mounted) return;
+                        Navigator.pop(dialogCtx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Password updated successfully! Welcome to your portal.'),
+                            backgroundColor: RampColors.success,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final tenants = ref.watch(tenantProvider).where((t) => !t.isArchived).toList();
+    final roleEnum = ref.watch(userRoleEnumProvider);
+    final currentUser = ref.watch(currentUserProvider);
+    final isLandlordOrAdmin =
+        roleEnum == UserRole.landlord || roleEnum == UserRole.superAdmin;
+
+    final tenants =
+        ref.watch(tenantProvider).where((t) => !t.isArchived).toList();
+
+    // Secure profile binding: Lock tenant to their own tenant record if authenticated as Tenant
+    final effectiveTenantId = (!isLandlordOrAdmin &&
+            currentUser?.tenantId != null &&
+            currentUser!.tenantId!.isNotEmpty)
+        ? currentUser.tenantId!
+        : _selectedTenantId;
+
     final activeTenant = tenants.firstWhere(
-      (t) => t.id == _selectedTenantId,
+      (t) => t.id == effectiveTenantId,
       orElse: () => tenants.isNotEmpty ? tenants.first : _dummyTenant,
     );
     final units = ref.watch(unitProvider);
     final tenantUnit = units.firstWhere(
-      (u) => u.id == activeTenant.unitId || u.unitNumber == activeTenant.unitNumber,
+      (u) =>
+          u.id == activeTenant.unitId ||
+          u.unitNumber == activeTenant.unitNumber,
       orElse: () => _dummyUnit,
     );
     final utilityRates = ref.watch(utilityRateProvider);
-    final payments = ref.watch(paymentProvider)
-        .where((p) => p.tenantId == activeTenant.id || p.tenantName == activeTenant.name)
+    final payments = ref
+        .watch(paymentProvider)
+        .where((p) =>
+            p.tenantId == activeTenant.id || p.tenantName == activeTenant.name)
         .toList();
-    final tickets = ref.watch(ticketProvider)
-        .where((t) => t.tenantId == activeTenant.id || t.unitNumber == activeTenant.unitNumber)
+    final tickets = ref
+        .watch(ticketProvider)
+        .where((t) =>
+            t.tenantId == activeTenant.id ||
+            t.unitNumber == activeTenant.unitNumber)
         .toList();
 
     // Compute itemized charges
     final waterRate = tenantUnit.effectiveWaterRate(utilityRates.waterRate);
-    final electricRate = tenantUnit.effectiveElectricityRate(utilityRates.electricityRate);
-    final waterCharge = tenantUnit.waterUtilityEnabled ? tenantUnit.waterUsage * waterRate : 0.0;
-    final electricCharge = tenantUnit.electricityUtilityEnabled ? tenantUnit.electricUsage * electricRate : 0.0;
-    final totalBill = activeTenant.monthlyRent + waterCharge + electricCharge;
+    final electricRate =
+        tenantUnit.effectiveElectricityRate(utilityRates.electricityRate);
+    final waterCharge = tenantUnit.waterUtilityEnabled
+        ? tenantUnit.waterUsage * waterRate
+        : 0.0;
+    final electricCharge = tenantUnit.electricityUtilityEnabled
+        ? tenantUnit.electricUsage * electricRate
+        : 0.0;
+    final lateFee = activeTenant.isLate ? tenantUnit.lateFee : 0.0;
+
+    // Itemized Billing Engine: Base Rent + Water Usage + Electric Usage + Late Fees
+    final totalBill =
+        activeTenant.monthlyRent + waterCharge + electricCharge + lateFee;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -62,24 +249,25 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
           style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
-          // Switch to Landlord Role Button
-          TextButton.icon(
-            style: TextButton.styleFrom(
-              foregroundColor: RampColors.primary,
+          // Switch to Landlord Role Button (Gated to Landlord/SuperAdmin only)
+          if (isLandlordOrAdmin)
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: RampColors.primary,
+              ),
+              icon: const Icon(Icons.admin_panel_settings_rounded, size: 18),
+              label: const Text('Landlord Mode'),
+              onPressed: () {
+                ref.read(rampProvider.notifier).setRole('landlord');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Switched to Landlord Admin View'),
+                    backgroundColor: RampColors.primary,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
             ),
-            icon: const Icon(Icons.admin_panel_settings_rounded, size: 18),
-            label: const Text('Landlord Mode'),
-            onPressed: () {
-              ref.read(rampProvider.notifier).setRole('landlord');
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Switched to Landlord Admin View'),
-                  backgroundColor: RampColors.primary,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-          ),
         ],
       ),
       body: SafeArea(
@@ -89,26 +277,31 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Tenant Selector Bar for switching profile context
-              if (tenants.length > 1) ...[
+              // Tenant Selector Bar (Gated for Landlords/Admins testing tenant profiles)
+              if (isLandlordOrAdmin && tenants.length > 1) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF1E293B) : Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                      color:
+                          isDark ? Colors.grey.shade800 : Colors.grey.shade200,
                     ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.person_pin_rounded, color: RampColors.primary, size: 20),
+                      const Icon(Icons.person_pin_rounded,
+                          color: RampColors.primary, size: 20),
                       const SizedBox(width: 10),
                       Text(
                         'Viewing as:',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
-                          color: isDark ? Colors.grey.shade400 : RampColors.mutedText,
+                          color: isDark
+                              ? Colors.grey.shade400
+                              : RampColors.mutedText,
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -130,7 +323,9 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                               );
                             }).toList(),
                             onChanged: (val) {
-                              if (val != null) setState(() => _selectedTenantId = val);
+                              if (val != null) {
+                                setState(() => _selectedTenantId = val);
+                              }
                             },
                           ),
                         ),
@@ -151,13 +346,7 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
+                  boxShadow: null,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -186,11 +375,13 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                           ],
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: activeTenant.balance > 0
                                 ? const Color(0xFFEF4444).withValues(alpha: 0.2)
-                                : const Color(0xFF10B981).withValues(alpha: 0.2),
+                                : const Color(0xFF10B981)
+                                    .withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: activeTenant.balance > 0
@@ -199,7 +390,9 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                             ),
                           ),
                           child: Text(
-                            activeTenant.balance > 0 ? 'Payment Due' : 'Paid in Full',
+                            activeTenant.balance > 0
+                                ? 'Payment Due'
+                                : 'Paid in Full',
                             style: GoogleFonts.poppins(
                               color: activeTenant.balance > 0
                                   ? const Color(0xFFFCA5A5)
@@ -234,17 +427,14 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                   border: Border.all(
                     color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  boxShadow: null,
                 ),
                 child: Column(
                   children: [
-                    _buildBillLineItem('Base Rent', currencyFormatter.format(activeTenant.monthlyRent), isDark),
+                    _buildBillLineItem(
+                        'Base Rent',
+                        currencyFormatter.format(activeTenant.monthlyRent),
+                        isDark),
                     if (tenantUnit.waterUtilityEnabled) ...[
                       const Divider(height: 20),
                       _buildBillLineItem(
@@ -258,6 +448,14 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                       _buildBillLineItem(
                         'Electricity (${tenantUnit.electricUsage.toStringAsFixed(0)} kWh @ ₱${electricRate.toStringAsFixed(2)}/kWh)',
                         currencyFormatter.format(electricCharge),
+                        isDark,
+                      ),
+                    ],
+                    if (lateFee > 0) ...[
+                      const Divider(height: 20),
+                      _buildBillLineItem(
+                        'Late Fee',
+                        currencyFormatter.format(lateFee),
                         isDark,
                       ),
                     ],
@@ -278,18 +476,21 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF10B981),
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
                           elevation: 0,
                         ),
                         icon: const Icon(Icons.upload_file_rounded, size: 20),
                         label: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
-                            'SUBMIT DIGITAL PAYMENT PROOF',
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13),
+                            'Submit Payment Proof',
+                            style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold, fontSize: 13),
                           ),
                         ),
-                        onPressed: () => _showPaymentUploadSheet(context, activeTenant, totalBill),
+                        onPressed: () => _showPaymentUploadSheet(
+                            context, activeTenant, totalBill),
                       ),
                     ),
                   ],
@@ -314,62 +515,89 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                          color:
+                              isDark ? const Color(0xFF1E293B) : Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+                          border: Border.all(
+                              color: isDark
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade200),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Row(
                               children: [
-                                Icon(Icons.water_drop_rounded, color: Color(0xFF0284C7), size: 18),
+                                Icon(Icons.water_drop_rounded,
+                                    color: Color(0xFF0284C7), size: 18),
                                 SizedBox(width: 6),
-                                Text('Water Submeter', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                Text('Water Submeter',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12)),
                               ],
                             ),
                             const SizedBox(height: 8),
                             Text(
                               '${tenantUnit.waterReadingCurr.toStringAsFixed(1)} m³',
-                              style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold),
+                              style: GoogleFonts.poppins(
+                                  fontSize: 18, fontWeight: FontWeight.bold),
                             ),
                             Text(
                               'Usage: ${tenantUnit.waterUsage.toStringAsFixed(1)} m³',
-                              style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade400 : RampColors.mutedText),
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark
+                                      ? Colors.grey.shade400
+                                      : RampColors.mutedText),
                             ),
                           ],
                         ),
                       ),
                     ),
-                  if (tenantUnit.waterUtilityEnabled && tenantUnit.electricityUtilityEnabled)
+                  if (tenantUnit.waterUtilityEnabled &&
+                      tenantUnit.electricityUtilityEnabled)
                     const SizedBox(width: 12),
                   if (tenantUnit.electricityUtilityEnabled)
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                          color:
+                              isDark ? const Color(0xFF1E293B) : Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+                          border: Border.all(
+                              color: isDark
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade200),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Row(
                               children: [
-                                Icon(Icons.bolt_rounded, color: Color(0xFFEAB308), size: 18),
+                                Icon(Icons.bolt_rounded,
+                                    color: Color(0xFFEAB308), size: 18),
                                 SizedBox(width: 6),
-                                Text('Electricity Submeter', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                Text('Electricity Submeter',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12)),
                               ],
                             ),
                             const SizedBox(height: 8),
                             Text(
                               '${tenantUnit.electricReadingCurr.toStringAsFixed(0)} kWh',
-                              style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold),
+                              style: GoogleFonts.poppins(
+                                  fontSize: 18, fontWeight: FontWeight.bold),
                             ),
                             Text(
                               'Usage: ${tenantUnit.electricUsage.toStringAsFixed(0)} kWh',
-                              style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade400 : RampColors.mutedText),
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark
+                                      ? Colors.grey.shade400
+                                      : RampColors.mutedText),
                             ),
                           ],
                         ),
@@ -392,8 +620,10 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.add_circle_outline_rounded, color: RampColors.primary),
-                    onPressed: () => _showCreateTicketSheet(context, activeTenant),
+                    icon: const Icon(Icons.add_circle_outline_rounded,
+                        color: RampColors.primary),
+                    onPressed: () =>
+                        _showCreateTicketSheet(context, activeTenant),
                   ),
                 ],
               ),
@@ -408,7 +638,10 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                   ),
                   child: Text(
                     'No repair tickets active for your unit.',
-                    style: TextStyle(color: isDark ? Colors.grey.shade400 : RampColors.mutedText),
+                    style: TextStyle(
+                        color: isDark
+                            ? Colors.grey.shade400
+                            : RampColors.mutedText),
                   ),
                 )
               else
@@ -444,7 +677,10 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                   ),
                   child: Text(
                     'No payment records found.',
-                    style: TextStyle(color: isDark ? Colors.grey.shade400 : RampColors.mutedText),
+                    style: TextStyle(
+                        color: isDark
+                            ? Colors.grey.shade400
+                            : RampColors.mutedText),
                   ),
                 )
               else
@@ -462,17 +698,26 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                          color:
+                              isDark ? const Color(0xFF1E293B) : Colors.white,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color: isPending ? const Color(0xFFF59E0B) : (isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+                            color: isPending
+                                ? const Color(0xFFF59E0B)
+                                : (isDark
+                                    ? Colors.grey.shade800
+                                    : Colors.grey.shade200),
                           ),
                         ),
                         child: Row(
                           children: [
                             Icon(
-                              isPending ? Icons.pending_actions_rounded : Icons.check_circle_rounded,
-                              color: isPending ? const Color(0xFFF59E0B) : const Color(0xFF10B981),
+                              isPending
+                                  ? Icons.pending_actions_rounded
+                                  : Icons.check_circle_rounded,
+                              color: isPending
+                                  ? const Color(0xFFF59E0B)
+                                  : const Color(0xFF10B981),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -481,11 +726,17 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                                 children: [
                                   Text(
                                     '${p.month} Rent (${p.method})',
-                                    style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13),
+                                    style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13),
                                   ),
                                   Text(
                                     'Ref: ${p.referenceNumber.isNotEmpty ? p.referenceNumber : "N/A"} • Tap to view receipt',
-                                    style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade400 : RampColors.mutedText),
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDark
+                                            ? Colors.grey.shade400
+                                            : RampColors.mutedText),
                                   ),
                                 ],
                               ),
@@ -495,7 +746,9 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                               children: [
                                 Text(
                                   currencyFormatter.format(p.amount),
-                                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14),
+                                  style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14),
                                 ),
                                 const SizedBox(height: 2),
                                 Row(
@@ -531,7 +784,8 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
     );
   }
 
-  Widget _buildBillLineItem(String label, String amount, bool isDark, {bool isBold = false}) {
+  Widget _buildBillLineItem(String label, String amount, bool isDark,
+      {bool isBold = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -552,40 +806,77 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
           style: GoogleFonts.poppins(
             fontSize: isBold ? 16 : 14,
             fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-            color: isBold ? const Color(0xFF10B981) : (isDark ? Colors.white : RampColors.slate),
+            color: isBold
+                ? const Color(0xFF10B981)
+                : (isDark ? Colors.white : RampColors.slate),
           ),
         ),
       ],
     );
   }
 
+  Color _getStatusDotColor(Ticket ticket) {
+    if (ticket.status == 'Completed' ||
+        ticket.status == 'Closed' ||
+        ticket.status.toLowerCase() == 'resolved') {
+      return const Color(0xFF10B981); // Green
+    }
+    if (ticket.priority.toLowerCase() == 'urgent' ||
+        ticket.priority.toLowerCase() == 'emergency') {
+      return const Color(0xFFEF4444); // Red
+    }
+    if (ticket.priority.toLowerCase() == 'high') {
+      return const Color(0xFFF59E0B); // Amber / Orange
+    }
+    return RampColors.primary; // Primary blue
+  }
+
   Widget _buildTicketCard(BuildContext context, Ticket ticket, bool isDark) {
-    final isCompleted = ticket.status.toLowerCase() == 'completed' || ticket.status.toLowerCase() == 'resolved';
+    final isCompleted = ticket.status.toLowerCase() == 'completed' ||
+        ticket.status.toLowerCase() == 'resolved';
+    final statusColor = _getStatusDotColor(ticket);
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+        boxShadow: null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                ticket.title,
-                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14),
+              // Single Colored Dot on Left Side
+              Container(
+                width: 10,
+                height: 10,
+                margin: const EdgeInsets.only(right: 10),
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  ticket.title,
+                  style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold, fontSize: 14),
+                ),
               ),
               StatusBadge(status: ticket.status),
             ],
           ),
           const SizedBox(height: 6),
-          Text(
-            ticket.description,
-            style: TextStyle(fontSize: 12, color: isDark ? Colors.grey.shade400 : RampColors.mutedText),
+          Padding(
+            padding: const EdgeInsets.only(left: 20.0),
+            child: Text(
+              ticket.description,
+              style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? Colors.grey.shade400 : RampColors.mutedText),
+            ),
           ),
           if (isCompleted) ...[
             const SizedBox(height: 10),
@@ -593,7 +884,8 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
               children: [
                 Text(
                   'Your Satisfaction Rating: ',
-                  style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.poppins(
+                      fontSize: 12, fontWeight: FontWeight.w600),
                 ),
                 Row(
                   children: List.generate(5, (starIdx) {
@@ -605,7 +897,9 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                             );
                       },
                       child: Icon(
-                        starIdx < ticket.rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                        starIdx < ticket.rating
+                            ? Icons.star_rounded
+                            : Icons.star_outline_rounded,
                         color: const Color(0xFFEAB308),
                         size: 20,
                       ),
@@ -620,7 +914,8 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
     );
   }
 
-  void _showPaymentUploadSheet(BuildContext context, Tenant tenant, double amount) {
+  void _showPaymentUploadSheet(
+      BuildContext context, Tenant tenant, double amount) {
     final methodNotifier = ValueNotifier<String>('GCash');
     final refCtrl = TextEditingController();
     final ocrService = ReceiptOcrService();
@@ -647,7 +942,8 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
             children: [
               Text(
                 'Submit Digital Payment',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18),
+                style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold, fontSize: 18),
               ),
               const SizedBox(height: 6),
               Text(
@@ -659,18 +955,24 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   side: const BorderSide(color: Color(0xFF3B82F6), width: 1.5),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: isScanning
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF3B82F6)),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Color(0xFF3B82F6)),
                       )
-                    : const Icon(Icons.document_scanner_rounded, color: Color(0xFF3B82F6)),
+                    : const Icon(Icons.document_scanner_rounded,
+                        color: Color(0xFF3B82F6)),
                 label: Text(
-                  isScanning ? 'Scanning Receipt with AI OCR...' : 'Auto-Fill via Receipt Screenshot OCR',
-                  style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF3B82F6)),
+                  isScanning
+                      ? 'Scanning Receipt with AI OCR...'
+                      : 'Auto-Fill via Receipt Screenshot OCR',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, color: Color(0xFF3B82F6)),
                 ),
                 onPressed: isScanning
                     ? null
@@ -681,14 +983,18 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                             child: Wrap(
                               children: [
                                 ListTile(
-                                  leading: const Icon(Icons.photo_library_rounded),
-                                  title: const Text('Choose from Gallery / Screenshot'),
-                                  onTap: () => Navigator.pop(sheetCtx, ImageSource.gallery),
+                                  leading:
+                                      const Icon(Icons.photo_library_rounded),
+                                  title: const Text(
+                                      'Choose from Gallery / Screenshot'),
+                                  onTap: () => Navigator.pop(
+                                      sheetCtx, ImageSource.gallery),
                                 ),
                                 ListTile(
                                   leading: const Icon(Icons.camera_alt_rounded),
                                   title: const Text('Take Photo of Receipt'),
-                                  onTap: () => Navigator.pop(sheetCtx, ImageSource.camera),
+                                  onTap: () => Navigator.pop(
+                                      sheetCtx, ImageSource.camera),
                                 ),
                               ],
                             ),
@@ -698,15 +1004,18 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                         if (source == null) return;
 
                         setModalState(() => isScanning = true);
-                        final result = await ocrService.pickAndScanReceipt(source);
+                        final result =
+                            await ocrService.pickAndScanReceipt(source);
                         setModalState(() => isScanning = false);
 
                         if (result != null && result.isSuccess) {
-                          if (result.referenceNumber != null && result.referenceNumber!.isNotEmpty) {
+                          if (result.referenceNumber != null &&
+                              result.referenceNumber!.isNotEmpty) {
                             refCtrl.text = result.referenceNumber!;
                           }
                           if (result.paymentMethod != null &&
-                              ['GCash', 'Maya', 'Bank Transfer', 'Cash'].contains(result.paymentMethod)) {
+                              ['GCash', 'Maya', 'Bank Transfer', 'Cash']
+                                  .contains(result.paymentMethod)) {
                             methodNotifier.value = result.paymentMethod!;
                           }
                           if (modalCtx.mounted) {
@@ -724,7 +1033,8 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                         } else if (result != null && modalCtx.mounted) {
                           ScaffoldMessenger.of(modalCtx).showSnackBar(
                             SnackBar(
-                              content: Text(result.errorMessage ?? 'Could not extract details from receipt image.'),
+                              content: Text(result.errorMessage ??
+                                  'Could not extract details from receipt image.'),
                               backgroundColor: Colors.redAccent,
                               behavior: SnackBarBehavior.floating,
                             ),
@@ -736,8 +1046,11 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
               ValueListenableBuilder<String>(
                 valueListenable: methodNotifier,
                 builder: (_, method, __) => DropdownButtonFormField<String>(
-                  value: method,
-                  decoration: const InputDecoration(labelText: 'Payment Method', border: OutlineInputBorder()),
+                  key: ValueKey(method),
+                  initialValue: method,
+                  decoration: const InputDecoration(
+                      labelText: 'Payment Method',
+                      border: OutlineInputBorder()),
                   items: ['GCash', 'Maya', 'Bank Transfer', 'Cash']
                       .map((m) => DropdownMenuItem(value: m, child: Text(m)))
                       .toList(),
@@ -761,20 +1074,26 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                   backgroundColor: const Color(0xFF10B981),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () {
                   final refNum = refCtrl.text.trim();
-                  if (refNum.isEmpty) {
+                  final refError = AppValidators.paymentReference(refNum);
+                  if (refError != null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter a reference number.')),
+                      SnackBar(
+                        content: Text(refError),
+                        backgroundColor: RampColors.danger,
+                        behavior: SnackBarBehavior.floating,
+                      ),
                     );
                     return;
                   }
                   final now = DateTime.now();
                   final payment = PaymentData(
                     id: 'p_${now.millisecondsSinceEpoch}',
-                    month: DateFormat('MMM').format(now),
+                    month: DateFormat('MMMM yyyy').format(now),
                     amount: amount,
                     method: methodNotifier.value,
                     paymentMethod: methodNotifier.value,
@@ -792,13 +1111,15 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                   Navigator.pop(modalCtx);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Payment submitted! Pending landlord verification.'),
+                      content: Text(
+                          'Payment submitted! Pending landlord verification.'),
                       backgroundColor: RampColors.success,
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
                 },
-                child: const Text('SUBMIT FOR VERIFICATION', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text('Submit Payment Proof',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -833,23 +1154,28 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
             children: [
               Text(
                 'Report Repair Issue',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18),
+                style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold, fontSize: 18),
               ),
               const SizedBox(height: 14),
               TextField(
                 controller: titleCtrl,
-                decoration: const InputDecoration(labelText: 'Issue Title', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                    labelText: 'Issue Title', border: OutlineInputBorder()),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: descCtrl,
                 maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                    labelText: 'Description', border: OutlineInputBorder()),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: priority,
-                decoration: const InputDecoration(labelText: 'Severity / Priority', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                    labelText: 'Severity / Priority',
+                    border: OutlineInputBorder()),
                 items: ['Low', 'Medium', 'Emergency']
                     .map((p) => DropdownMenuItem(value: p, child: Text(p)))
                     .toList(),
@@ -863,7 +1189,8 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                   backgroundColor: RampColors.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () {
                   if (titleCtrl.text.trim().isEmpty) return;
@@ -888,7 +1215,8 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                     ),
                   );
                 },
-                child: const Text('SUBMIT REPAIR TICKET', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text('Submit Repair Ticket',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           ),

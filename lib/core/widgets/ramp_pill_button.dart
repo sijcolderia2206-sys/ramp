@@ -89,7 +89,8 @@ class RampPillButton extends StatelessWidget {
     return ClayContainer(
       height: height,
       width: isFullWidth ? (width ?? double.infinity) : width,
-      color: colors.backgroundColor,
+      color: colors.gradient != null ? null : colors.backgroundColor,
+      gradient: colors.gradient,
       borderRadius: 50,
       depth: isInteractable ? 6.0 : 2.0,
       onTap: isInteractable ? onPressed : null,
@@ -110,6 +111,7 @@ class RampPillButton extends StatelessWidget {
       case RampButtonStyle.primary:
         return _ButtonStyleColors(
           backgroundColor: RampColors.primary,
+          gradient: RampColors.primaryGradient,
           contentColor: Colors.white,
         );
       case RampButtonStyle.secondary:
@@ -134,11 +136,13 @@ class RampPillButton extends StatelessWidget {
 
 class _ButtonStyleColors {
   final Color backgroundColor;
+  final Gradient? gradient;
   final Color contentColor;
   final Color? borderColor;
 
   _ButtonStyleColors({
     required this.backgroundColor,
+    this.gradient,
     required this.contentColor,
     this.borderColor,
   });

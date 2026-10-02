@@ -8,8 +8,8 @@ import '../core/widgets/core_widgets.dart';
 import '../core/theme/ramp_theme.dart';
 import '../core/validation/app_validators.dart';
 import '../core/services/report_export_service.dart';
-import '../core/services/pdf_receipt_service.dart';
-import '../widgets/receipt_modal.dart';
+import '../widgets/receipt_modal.dart' show showDigitalReceiptModal;
+import 'payment_form.dart';
 
 class PaymentsScreen extends ConsumerStatefulWidget {
   const PaymentsScreen({
@@ -50,6 +50,9 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
   bool _isLoading = true;
   bool _hasError = false;
 
+  int _currentPage = 1;
+  static const int _pageSize = 20;
+
   @override
   void initState() {
     super.initState();
@@ -72,11 +75,11 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     super.dispose();
   }
 
-  Future<bool> _confirmPaymentAction(String title, String message) async {
+  Future<bool> _confirmPaymentAction(String dialogTitle, String message) async {
     return await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
-            title: Text(title),
+            title: Text(dialogTitle),
             content: Text(message),
             actions: [
               TextButton(
@@ -255,8 +258,8 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
         );
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Payment updated and tenant balance recalculated.'),
+      SnackBar(
+        content: const Text('Payment updated and tenant balance recalculated.'),
         backgroundColor: RampColors.success,
         behavior: SnackBarBehavior.floating,
       ),
@@ -276,7 +279,8 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
   }
 
   Tenant? get _activeTenantFilter =>
-      widget.tenantFilter ?? (!widget.openPaymentForm ? widget.initialTenant : null);
+      widget.tenantFilter ??
+      (!widget.openPaymentForm ? widget.initialTenant : null);
 
   @override
   Widget build(BuildContext context) {
@@ -292,7 +296,8 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
           .where((payment) =>
               payment.tenantId == activeTenant.id ||
               (activeTenant.name.isNotEmpty &&
-                  payment.tenantName.toLowerCase() == activeTenant.name.toLowerCase()))
+                  payment.tenantName.toLowerCase() ==
+                      activeTenant.name.toLowerCase()))
           .toList();
     }
 
@@ -315,14 +320,14 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
       final now = DateTime.now();
       filteredPayments = filteredPayments
           .where((p) =>
-              p.paymentDate.month == now.month &&
-              p.paymentDate.year == now.year)
+              p.effectivePaymentDate.month == now.month &&
+              p.effectivePaymentDate.year == now.year)
           .toList();
     } else if (_selectedFilter == 'Last 3 Months') {
       final now = DateTime.now();
       final threeMonthsAgo = DateTime(now.year, now.month - 3, now.day);
       filteredPayments = filteredPayments
-          .where((p) => p.paymentDate.isAfter(threeMonthsAgo))
+          .where((p) => p.effectivePaymentDate.isAfter(threeMonthsAgo))
           .toList();
     }
 
@@ -352,14 +357,24 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
 
     filteredPayments = List.from(filteredPayments);
     if (_sortOption == 'Newest') {
-      filteredPayments.sort((a, b) => b.paymentDate.compareTo(a.paymentDate));
+      filteredPayments.sort(
+          (a, b) => b.effectivePaymentDate.compareTo(a.effectivePaymentDate));
     } else if (_sortOption == 'Oldest') {
-      filteredPayments.sort((a, b) => a.paymentDate.compareTo(b.paymentDate));
+      filteredPayments.sort(
+          (a, b) => a.effectivePaymentDate.compareTo(b.effectivePaymentDate));
     } else if (_sortOption == 'Highest Amount') {
       filteredPayments.sort((a, b) => b.amount.compareTo(a.amount));
     } else if (_sortOption == 'Lowest Amount') {
       filteredPayments.sort((a, b) => a.amount.compareTo(b.amount));
     }
+
+    // Pagination calculations (20 per page)
+    final totalPages =
+        (filteredPayments.length / _pageSize).ceil().clamp(1, 999);
+    final currentPageClamped = _currentPage.clamp(1, totalPages);
+    final startIndex = (currentPageClamped - 1) * _pageSize;
+    final paginatedPayments =
+        filteredPayments.skip(startIndex).take(_pageSize).toList();
 
     return Scaffold(
       backgroundColor: isDark
@@ -597,9 +612,8 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                             checkmarkColor:
                                 Theme.of(context).colorScheme.onPrimary,
                             side: BorderSide(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .outlineVariant,
+                              color:
+                                  Theme.of(context).colorScheme.outlineVariant,
                             ),
                           ),
                         );
@@ -641,9 +655,8 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                             checkmarkColor:
                                 Theme.of(context).colorScheme.onPrimary,
                             side: BorderSide(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .outlineVariant,
+                              color:
+                                  Theme.of(context).colorScheme.outlineVariant,
                             ),
                           ),
                         );
@@ -655,8 +668,14 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                           margin: const EdgeInsets.symmetric(vertical: 4),
                           color: Theme.of(context).colorScheme.outlineVariant),
                       const SizedBox(width: 8),
-                      ...['All', 'Paid', 'Pending', 'Maintenance', 'Declined', 'Reversed']
-                          .map((status) {
+                      ...[
+                        'All',
+                        'Paid',
+                        'Pending',
+                        'Maintenance',
+                        'Declined',
+                        'Reversed'
+                      ].map((status) {
                         final isSelected = _statusFilter == status;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8.0),
@@ -689,9 +708,8 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                             checkmarkColor:
                                 Theme.of(context).colorScheme.onPrimary,
                             side: BorderSide(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .outlineVariant,
+                              color:
+                                  Theme.of(context).colorScheme.outlineVariant,
                             ),
                           ),
                         );
@@ -731,270 +749,450 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                           onButtonPressed: () => _showPayNowDialog(),
                         )
                       : Column(
-                          children:
-                              List.generate(filteredPayments.length, (index) {
-                            final payment = filteredPayments[index];
+                          children: [
+                            ...List.generate(paginatedPayments.length, (index) {
+                              final payment = paginatedPayments[index];
 
-                            return StaggeredListItem(
-                              index: index,
-                              child: Padding(
-                                padding: const EdgeInsets.only(bottom: 16.0),
-                                child: Card(
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                    side: BorderSide(
-                                      color: Theme.of(context).colorScheme.outlineVariant,
+                              return StaggeredListItem(
+                                index: index,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(bottom: 16.0),
+                                  child: Card(
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      side: BorderSide(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .outlineVariant,
+                                      ),
                                     ),
-                                  ),
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(16),
-                                    onTap: () => _showReceiptPdfModal(payment),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16.0),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Expanded(
-                                                child: Row(
-                                                  children: [
-                                                    Container(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              10),
-                                                      decoration: BoxDecoration(
-                                                        color: payment.isMaintenance
-                                                            ? RampColors.warning.withValues(alpha: 0.14)
-                                                            : payment.isPaid
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(16),
+                                      onTap: () =>
+                                          _showReceiptPdfModal(payment),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Expanded(
+                                                  child: Row(
+                                                    children: [
+                                                      Container(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .all(10),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: payment
+                                                                  .isMaintenance
+                                                              ? RampColors
+                                                                  .warning
+                                                                  .withValues(
+                                                                      alpha:
+                                                                          0.14)
+                                                              : payment.isPaid
+                                                                  ? RampColors
+                                                                      .successTint
+                                                                  : payment.isDeclined ||
+                                                                          payment
+                                                                              .isReversed
+                                                                      ? Theme.of(
+                                                                              context)
+                                                                          .colorScheme
+                                                                          .errorContainer
+                                                                      : Theme.of(
+                                                                              context)
+                                                                          .colorScheme
+                                                                          .primaryContainer,
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(12),
+                                                        ),
+                                                        child: Icon(
+                                                          payment.isMaintenance
+                                                              ? Icons
+                                                                  .home_repair_service_rounded
+                                                              : payment.method ==
+                                                                      'GCash'
+                                                                  ? Icons
+                                                                      .account_balance_wallet_rounded
+                                                                  : payment.method ==
+                                                                          'Maya'
+                                                                      ? Icons
+                                                                          .credit_card_rounded
+                                                                      : payment.method ==
+                                                                              'Bank Transfer'
+                                                                          ? Icons
+                                                                              .account_balance_rounded
+                                                                          : Icons
+                                                                              .payments_rounded,
+                                                          color: payment
+                                                                  .isMaintenance
+                                                              ? RampColors
+                                                                  .warning
+                                                              : payment.isPaid
+                                                                  ? RampColors
+                                                                      .success
+                                                                  : payment.isDeclined ||
+                                                                          payment
+                                                                              .isReversed
+                                                                      ? Theme.of(
+                                                                              context)
+                                                                          .colorScheme
+                                                                          .error
+                                                                      : Theme.of(
+                                                                              context)
+                                                                          .colorScheme
+                                                                          .primary,
+                                                          size: 22,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 12),
+                                                      Expanded(
+                                                        child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .start,
+                                                          children: [
+                                                            Text(
+                                                              payment.isMaintenance
+                                                                  ? 'Maintenance • ${payment.unitNumber}'
+                                                                  : '${payment.tenantName} (${payment.unitNumber})',
+                                                              style: Theme.of(
+                                                                      context)
+                                                                  .textTheme
+                                                                  .titleMedium
+                                                                  ?.copyWith(
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                    color: Theme.of(
+                                                                            context)
+                                                                        .colorScheme
+                                                                        .onSurface,
+                                                                  ),
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                              maxLines: 1,
+                                                            ),
+                                                            const SizedBox(
+                                                                height: 2),
+                                                            Text(
+                                                              payment.isMaintenance
+                                                                  ? '${payment.remarks ?? 'Repair estimate'} • Ticket ${payment.ticketId ?? 'Unlinked'}'
+                                                                  : '${payment.month} • ${payment.method} • ${DateFormat('MMM dd, yyyy').format(payment.effectivePaymentDate)}',
+                                                              style: Theme.of(
+                                                                      context)
+                                                                  .textTheme
+                                                                  .bodyMedium
+                                                                  ?.copyWith(
+                                                                    color: Theme.of(
+                                                                            context)
+                                                                        .colorScheme
+                                                                        .onSurfaceVariant,
+                                                                    fontSize:
+                                                                        12,
+                                                                  ),
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                              maxLines: 1,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 6),
+                                                  decoration: BoxDecoration(
+                                                    color: payment.isMaintenance
+                                                        ? RampColors.warning
+                                                            .withValues(
+                                                                alpha: 0.14)
+                                                        : payment.isPaid
                                                             ? RampColors
                                                                 .successTint
                                                             : payment.isDeclined ||
                                                                     payment
                                                                         .isReversed
-                                                                ? Theme.of(context).colorScheme.errorContainer
-                                                                : Theme.of(context).colorScheme.primaryContainer,
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                                12),
-                                                      ),
-                                                      child: Icon(
-                                                        payment.isMaintenance
-                                                            ? Icons.home_repair_service_rounded
-                                                            : payment.method == 'GCash'
+                                                                ? Theme.of(
+                                                                        context)
+                                                                    .colorScheme
+                                                                    .errorContainer
+                                                                : Theme.of(
+                                                                        context)
+                                                                    .colorScheme
+                                                                    .primaryContainer,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10),
+                                                  ),
+                                                  child: Text(
+                                                    payment.formattedAmount,
+                                                    style:
+                                                        Theme.of(context)
+                                                            .textTheme
+                                                            .titleSmall
+                                                            ?.copyWith(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color: payment
+                                                                      .isMaintenance
+                                                                  ? RampColors
+                                                                      .warning
+                                                                  : payment
+                                                                          .isPaid
+                                                                      ? RampColors
+                                                                          .success
+                                                                      : payment.isDeclined ||
+                                                                              payment
+                                                                                  .isReversed
+                                                                          ? Theme.of(context)
+                                                                              .colorScheme
+                                                                              .error
+                                                                          : Theme.of(context)
+                                                                              .colorScheme
+                                                                              .primary,
+                                                            ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            Divider(
+                                                height: 20,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .outlineVariant),
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Expanded(
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        payment.isPaid
                                                             ? Icons
-                                                                .account_balance_wallet_rounded
-                                                            : payment.method ==
-                                                                    'Maya'
-                                                                ? Icons
-                                                                    .credit_card_rounded
-                                                                : payment.method ==
-                                                                        'Bank Transfer'
-                                                                    ? Icons
-                                                                        .account_balance_rounded
-                                                                    : Icons
-                                                                        .payments_rounded,
-                                                        color: payment.isMaintenance
-                                                            ? RampColors.warning
-                                                            : payment.isPaid
-                                                            ? RampColors.success
+                                                                .check_circle_rounded
                                                             : payment.isDeclined ||
                                                                     payment
                                                                         .isReversed
-                                                                ? Theme.of(context).colorScheme.error
-                                                                : Theme.of(context).colorScheme.primary,
-                                                        size: 22,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 12),
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Text(
-                                                            payment.isMaintenance
-                                                                ? 'Maintenance • ${payment.unitNumber}'
-                                                                : '${payment.tenantName} (${payment.unitNumber})',
-                                                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                                              fontWeight: FontWeight.bold,
-                                                              color: Theme.of(context).colorScheme.onSurface,
-                                                            ),
-                                                            overflow: TextOverflow
-                                                                .ellipsis,
-                                                            maxLines: 1,
-                                                          ),
-                                                          const SizedBox(
-                                                              height: 2),
-                                                          Text(
-                                                            payment.isMaintenance
-                                                                ? '${payment.remarks ?? 'Repair estimate'} • Ticket ${payment.ticketId ?? 'Unlinked'}'
-                                                                : '${payment.month} • ${payment.method} • ${DateFormat('MMM dd, yyyy').format(payment.paymentDate)}',
-                                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                                              fontSize: 12,
-                                                            ),
-                                                            overflow: TextOverflow.ellipsis,
-                                                            maxLines: 1,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 10,
-                                                        vertical: 6),
-                                                decoration: BoxDecoration(
-                                                  color: payment.isMaintenance
-                                                      ? RampColors.warning.withValues(alpha: 0.14)
-                                                      : payment.isPaid
-                                                      ? RampColors.successTint
-                                                      : payment.isDeclined ||
-                                                              payment.isReversed
-                                                          ? Theme.of(context).colorScheme.errorContainer
-                                                          : Theme.of(context).colorScheme.primaryContainer,
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                ),
-                                                child: Text(
-                                                  payment.formattedAmount,
-                                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                                    fontWeight: FontWeight.bold,
-                                                    color: payment.isMaintenance
-                                                        ? RampColors.warning
-                                                        : payment.isPaid
-                                                        ? RampColors.success
-                                                        : payment.isDeclined ||
-                                                                payment.isReversed
-                                                            ? Theme.of(context).colorScheme.error
-                                                            : Theme.of(context).colorScheme.primary,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          Divider(
-                                              height: 20,
-                                              color: Theme.of(context).colorScheme.outlineVariant),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Expanded(
-                                                child: Row(
-                                                  children: [
-                                                    Icon(
-                                                      payment.isPaid
-                                                          ? Icons
-                                                              .check_circle_rounded
-                                                          : payment.isDeclined ||
-                                                                  payment.isReversed
-                                                              ? Icons.cancel_rounded
-                                                              : Icons
-                                                                  .pending_actions_rounded,
-                                                      color: payment.isPaid
-                                                          ? RampColors.success
-                                                          : payment.isDeclined ||
-                                                                  payment.isReversed
-                                                              ? Theme.of(context).colorScheme.error
-                                                              : Theme.of(context).colorScheme.primary,
-                                                      size: 16,
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Text(
-                                                      payment.status.toUpperCase(),
-                                                      style: TextStyle(
-                                                        fontSize: 11,
-                                                        fontWeight: FontWeight.bold,
+                                                                ? Icons
+                                                                    .cancel_rounded
+                                                                : Icons
+                                                                    .pending_actions_rounded,
                                                         color: payment.isPaid
                                                             ? RampColors.success
                                                             : payment.isDeclined ||
                                                                     payment
                                                                         .isReversed
-                                                                ? Theme.of(context).colorScheme.error
-                                                                : Theme.of(context).colorScheme.primary,
+                                                                ? Theme.of(
+                                                                        context)
+                                                                    .colorScheme
+                                                                    .error
+                                                                : Theme.of(
+                                                                        context)
+                                                                    .colorScheme
+                                                                    .primary,
+                                                        size: 16,
                                                       ),
-                                                    ),
-                                                    const SizedBox(width: 10),
-                                                    Expanded(
-                                                      child: Text(
-                                                        'Ref: ${payment.referenceNumber}',
-                                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                                      const SizedBox(width: 6),
+                                                      Text(
+                                                        payment.status
+                                                            .toUpperCase(),
+                                                        style: TextStyle(
+                                                          fontSize: 11,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: payment.isPaid
+                                                              ? RampColors
+                                                                  .success
+                                                              : payment.isDeclined ||
+                                                                      payment
+                                                                          .isReversed
+                                                                  ? Theme.of(
+                                                                          context)
+                                                                      .colorScheme
+                                                                      .error
+                                                                  : Theme.of(
+                                                                          context)
+                                                                      .colorScheme
+                                                                      .primary,
                                                         ),
-                                                        overflow: TextOverflow.ellipsis,
-                                                        maxLines: 1,
                                                       ),
+                                                      const SizedBox(width: 10),
+                                                      Expanded(
+                                                        child: Text(
+                                                          'Ref: ${payment.referenceNumber}',
+                                                          style:
+                                                              Theme.of(context)
+                                                                  .textTheme
+                                                                  .bodySmall
+                                                                  ?.copyWith(
+                                                                    color: Theme.of(
+                                                                            context)
+                                                                        .colorScheme
+                                                                        .onSurfaceVariant,
+                                                                  ),
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          maxLines: 1,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                Row(
+                                                  children: [
+                                                    IconButton(
+                                                      icon: Icon(
+                                                          Icons.edit_outlined,
+                                                          size: 18,
+                                                          color:
+                                                              Theme.of(context)
+                                                                  .colorScheme
+                                                                  .primary),
+                                                      tooltip: 'Edit Record',
+                                                      onPressed: () =>
+                                                          _showEditPaymentModal(
+                                                              payment),
+                                                    ),
+                                                    IconButton(
+                                                      icon: Icon(
+                                                          Icons
+                                                              .delete_outline_rounded,
+                                                          size: 18,
+                                                          color:
+                                                              Theme.of(context)
+                                                                  .colorScheme
+                                                                  .error),
+                                                      tooltip: 'Delete Record',
+                                                      onPressed: () async {
+                                                        final confirm =
+                                                            await _confirmPaymentAction(
+                                                          'Delete Payment Record?',
+                                                          'This will permanently delete this payment from the ledger and recalculate tenant balance.',
+                                                        );
+                                                        if (confirm) {
+                                                          ref
+                                                              .read(
+                                                                  paymentProvider
+                                                                      .notifier)
+                                                              .deletePayment(
+                                                                  payment.id);
+                                                          if (context.mounted) {
+                                                            ScaffoldMessenger
+                                                                    .of(context)
+                                                                .showSnackBar(
+                                                              const SnackBar(
+                                                                  content: Text(
+                                                                      'Payment deleted.')),
+                                                            );
+                                                          }
+                                                        }
+                                                      },
                                                     ),
                                                   ],
                                                 ),
-                                              ),
-                                              Row(
-                                                children: [
-                                                  IconButton(
-                                                    icon: Icon(
-                                                        Icons.edit_outlined,
-                                                        size: 18,
-                                                        color:
-                                                            Theme.of(context).colorScheme.primary),
-                                                    tooltip: 'Edit Record',
-                                                    onPressed: () =>
-                                                        _showEditPaymentModal(
-                                                            payment),
-                                                  ),
-                                                  IconButton(
-                                                    icon: Icon(
-                                                        Icons
-                                                            .delete_outline_rounded,
-                                                        size: 18,
-                                                        color: Theme.of(context).colorScheme.error),
-                                                    tooltip: 'Delete Record',
-                                                    onPressed: () async {
-                                                      final confirm =
-                                                          await _confirmPaymentAction(
-                                                        'Delete Payment Record?',
-                                                        'This will permanently delete this payment from the ledger and recalculate tenant balance.',
-                                                      );
-                                                      if (confirm) {
-                                                        ref
-                                                            .read(paymentProvider
-                                                                .notifier)
-                                                            .deletePayment(
-                                                                payment.id);
-                                                        if (context.mounted) {
-                                                          ScaffoldMessenger.of(
-                                                                  context)
-                                                              .showSnackBar(
-                                                            const SnackBar(
-                                                                content: Text(
-                                                                    'Payment deleted.')),
-                                                          );
-                                                        }
-                                                      }
-                                                    },
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ],
+                                              ],
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
+                              );
+                            }),
+
+                            // 20-Items-Per-Page Pagination Bar
+                            if (filteredPayments.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? const Color(0xFF1E293B)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isDark
+                                        ? const Color(0xFF334155)
+                                        : RampColors.border,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Showing ${startIndex + 1}–${(startIndex + paginatedPayments.length)} of ${filteredPayments.length}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                              color: isDark
+                                                  ? Colors.grey.shade300
+                                                  : RampColors.slate,
+                                            ),
+                                      ),
+                                    ),
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                              Icons.chevron_left_rounded),
+                                          tooltip: 'Previous Page',
+                                          onPressed: currentPageClamped > 1
+                                              ? () =>
+                                                  setState(() => _currentPage--)
+                                              : null,
+                                        ),
+                                        Text(
+                                          'Page $currentPageClamped of $totalPages',
+                                          style: GoogleFonts.poppins(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            color: RampColors.primary,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                              Icons.chevron_right_rounded),
+                                          tooltip: 'Next Page',
+                                          onPressed: currentPageClamped <
+                                                  totalPages
+                                              ? () =>
+                                                  setState(() => _currentPage++)
+                                              : null,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                            );
-                          }),
+                            ],
+                          ],
                         ),
               ],
             ),
@@ -1016,382 +1214,3 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
 }
 
 typedef TenantPaymentsScreen = PaymentsScreen;
-
-void showRecordPaymentSheet(
-  BuildContext context,
-  WidgetRef ref, {
-  Tenant? initialTenant,
-}) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  const paymentMethods = ['GCash', 'Maya', 'Bank Transfer', 'Cash'];
-  String selectedMethod = 'GCash';
-  final allTenants = ref.read(tenantProvider);
-  if (allTenants.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Create a tenant profile before recording a payment.'),
-    ));
-    return;
-  }
-  Tenant? selectedTenant = initialTenant ??
-      allTenants.where((t) => !t.isArchived).firstOrNull ??
-      allTenants.firstOrNull;
-
-  final refController = TextEditingController();
-  final monthController = TextEditingController(
-    text: DateFormat('MMMM yyyy').format(DateTime.now()),
-  );
-  final amountController = TextEditingController();
-
-  final baseRentCtrl = TextEditingController();
-  final waterCtrl = TextEditingController(text: '0.0');
-  final electricCtrl = TextEditingController(text: '0.0');
-  final lateFeeCtrl = TextEditingController(text: '0.0');
-
-  final currencyFormat = NumberFormat.currency(
-    locale: 'en_PH',
-    symbol: '₱',
-    decimalDigits: 2,
-  );
-
-  void applyTenantCharges(Tenant selected) {
-    final unit = ref
-        .read(unitProvider)
-        .where((item) => item.id == selected.unitId)
-        .firstOrNull;
-    final rates = ref.read(utilityRateProvider);
-    final water = unit == null || !unit.waterUtilityEnabled
-        ? 0.0
-        : unit.waterUsage * unit.effectiveWaterRate(rates.waterRate);
-    final electricity = unit == null || !unit.electricityUtilityEnabled
-        ? 0.0
-        : unit.electricUsage *
-            unit.effectiveElectricityRate(rates.electricityRate);
-    baseRentCtrl.text = selected.monthlyRent.toStringAsFixed(2);
-    waterCtrl.text = water.toStringAsFixed(2);
-    electricCtrl.text = electricity.toStringAsFixed(2);
-    amountController.text =
-        (selected.monthlyRent + water + electricity).toStringAsFixed(2);
-  }
-
-  if (selectedTenant != null) {
-    applyTenantCharges(selectedTenant);
-  }
-
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor:
-        isDark ? Theme.of(context).colorScheme.surface : Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-    ),
-    builder: (modalContext) {
-      return StatefulBuilder(
-        builder: (modalContext, setModalState) {
-          final activeTenant = selectedTenant;
-          final tenantUnit = activeTenant == null
-              ? null
-              : ref
-                  .read(unitProvider)
-                  .where((unit) => unit.id == activeTenant.unitId)
-                  .firstOrNull;
-
-          final bottomInset = MediaQuery.of(modalContext).viewInsets.bottom +
-              MediaQuery.of(modalContext).padding.bottom +
-              28;
-          return Padding(
-            padding: EdgeInsets.only(
-              left: 20,
-              right: 20,
-              top: 20,
-              bottom: bottomInset,
-            ),
-            child: SafeArea(
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.payments_rounded,
-                                color: RampColors.primary, size: 26),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Record Payment',
-                              style: GoogleFonts.poppins(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : RampColors.slate,
-                              ),
-                            ),
-                          ],
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(modalContext),
-                        ),
-                      ],
-                    ),
-                    Divider(
-                        color: isDark
-                            ? const Color(0xFF334155)
-                            : RampColors.border),
-                    const SizedBox(height: 12),
-                    if (initialTenant == null && allTenants.isNotEmpty) ...[
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedTenant?.id,
-                        decoration: const InputDecoration(
-                          labelText: 'Tenant and unit',
-                          prefixIcon: Icon(Icons.person_outline_rounded),
-                        ),
-                        items: allTenants
-                            .map((item) => DropdownMenuItem(
-                                  value: item.id,
-                                  child: Text(
-                                      '${item.name} • ${item.unitNumber}${item.isFormer ? ' (Former)' : ''}'),
-                                ))
-                            .toList(),
-                        onChanged: (tenantId) => setModalState(() {
-                          selectedTenant = allTenants
-                              .where((item) => item.id == tenantId)
-                              .firstOrNull;
-                          if (selectedTenant != null) {
-                            applyTenantCharges(selectedTenant!);
-                          }
-                        }),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    if (activeTenant != null) ...[
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: RampColors.softBlueTint,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(activeTenant.name,
-                                style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
-                                    color: RampColors.slate)),
-                            Text(
-                              '${activeTenant.unitNumber} • Current Balance: ${currencyFormat.format(activeTenant.balance)}',
-                              style: GoogleFonts.poppins(
-                                  fontSize: 13, color: RampColors.mutedText),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    RampTextField(
-                      controller: monthController,
-                      label: 'Payment Month',
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: RampTextField(
-                            controller: baseRentCtrl,
-                            label: 'Base Rent (₱)',
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: RampTextField(
-                            controller: waterCtrl,
-                            label: 'Water Bill (₱)',
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: RampTextField(
-                            controller: electricCtrl,
-                            label: 'Electric Bill (₱)',
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: RampTextField(
-                            controller: lateFeeCtrl,
-                            label: 'Late Fee (₱)',
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    RampTextField(
-                      controller: amountController,
-                      label: 'Total Amount Paid (₱)',
-                      hintText: 'Enter total amount received',
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Payment Method',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: isDark ? Colors.white : RampColors.slate,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      children: paymentMethods.map((method) {
-                        final isSelected = selectedMethod == method;
-                        return ChoiceChip(
-                          label: Text(
-                            method,
-                            style: GoogleFonts.poppins(
-                              color: isSelected
-                                  ? Colors.white
-                                  : (isDark ? Colors.white : RampColors.slate),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          selected: isSelected,
-                          selectedColor: RampColors.primary,
-                          backgroundColor: isDark
-                              ? const Color(0xFF0F172A)
-                              : RampColors.background,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setModalState(() => selectedMethod = method);
-                            }
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 16),
-                    RampTextField(
-                      controller: refController,
-                      label: 'Reference Number / Txn ID',
-                      hintText: 'e.g. GC-198273645',
-                    ),
-                    const SizedBox(height: 20),
-                    BouncePillButton(
-                      text: 'RECORD PAYMENT',
-                      icon: Icons.check_circle_rounded,
-                      backgroundColor: RampColors.success,
-                      onPressed: () async {
-                        final month = monthController.text.trim().isEmpty
-                            ? DateFormat('MMM yyyy').format(DateTime.now())
-                            : monthController.text.trim();
-                        final refNum = refController.text.trim().isEmpty
-                            ? 'REF-${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}'
-                            : refController.text.trim();
-
-                        final baseRent =
-                            double.tryParse(baseRentCtrl.text.trim()) ?? 0.0;
-                        final water =
-                            double.tryParse(waterCtrl.text.trim()) ?? 0.0;
-                        final electric =
-                            double.tryParse(electricCtrl.text.trim()) ?? 0.0;
-                        final lateFee =
-                            double.tryParse(lateFeeCtrl.text.trim()) ?? 0.0;
-                        final totalPaid =
-                            double.tryParse(amountController.text.trim()) ??
-                                (baseRent + water + electric + lateFee);
-
-                        if (totalPaid <= 0) {
-                          ScaffoldMessenger.of(modalContext).showSnackBar(
-                            const SnackBar(
-                                content:
-                                    Text('Please enter a valid amount paid.')),
-                          );
-                          return;
-                        }
-
-                        final newPayment = PaymentData(
-                          month: month,
-                          amount: totalPaid,
-                          method: selectedMethod,
-                          paymentMethod: selectedMethod,
-                          date: DateTime.now(),
-                          paymentDate: DateTime.now(),
-                          status: 'Paid',
-                          referenceNumber: refNum,
-                          unitId:
-                              activeTenant?.unitId ?? tenantUnit?.id ?? 'u1',
-                          unitNumber: activeTenant?.unitNumber ??
-                              tenantUnit?.unitNumber ??
-                              'Unit 1',
-                          tenantId: activeTenant?.id ?? '',
-                          tenantName: activeTenant?.name ?? 'Tenant',
-                          baseRent: baseRent > 0 ? baseRent : totalPaid,
-                          waterBill: water,
-                          electricBill: electric,
-                          lateFee: lateFee,
-                        );
-
-                        final confirmed = await showDialog<bool>(
-                              context: modalContext,
-                              builder: (dialogContext) => AlertDialog(
-                                title: const Text('Record this payment?'),
-                                content: const Text(
-                                    'Add this payment to the tenant ledger and recalculate balance?'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(dialogContext, false),
-                                    child: const Text('CANCEL'),
-                                  ),
-                                  FilledButton(
-                                    onPressed: () =>
-                                        Navigator.pop(dialogContext, true),
-                                    child: const Text('CONFIRM'),
-                                  ),
-                                ],
-                              ),
-                            ) ??
-                            false;
-
-                        if (!confirmed || !modalContext.mounted) return;
-                        ref
-                            .read(paymentProvider.notifier)
-                            .addPayment(newPayment);
-
-                        Navigator.pop(modalContext);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                                'Payment for $month submitted successfully! Ref: $refNum'),
-                            backgroundColor: RampColors.success,
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      );
-    },
-  );
-}

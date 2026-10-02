@@ -1,5 +1,34 @@
 import 'package:flutter/material.dart';
 
+/// Smooth Fade Transition Route for Screen Navigation (e.g., Full Ledger / PaymentsScreen)
+class FadePageRoute<T> extends PageRouteBuilder<T> {
+  final Widget page;
+  final Duration duration;
+  final Curve curve;
+
+  FadePageRoute({
+    required this.page,
+    this.duration = const Duration(milliseconds: 300),
+    this.curve = Curves.easeInOut,
+    super.settings,
+  }) : super(
+          pageBuilder: (context, animation, secondaryAnimation) => page,
+          transitionDuration: duration,
+          reverseTransitionDuration: duration,
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final fadeAnimation = CurvedAnimation(
+              parent: animation,
+              curve: curve,
+            );
+            return FadeTransition(
+              opacity: fadeAnimation,
+              child: child,
+            );
+          },
+        );
+}
+
+/// Slide-up with Subtle Fade Transition Route for Bottom Sheets & Modal Views
 class SlideUpFadeRoute<T> extends PageRouteBuilder<T> {
   final Widget page;
 

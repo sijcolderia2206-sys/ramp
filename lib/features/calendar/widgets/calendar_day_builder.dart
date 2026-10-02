@@ -5,7 +5,8 @@ import '../../../models/models.dart';
 
 class CalendarDayBuilderHelper {
   /// Custom selected day builder
-  static Widget buildSelectedDay(BuildContext context, DateTime day, DateTime focusedDay) {
+  static Widget buildSelectedDay(
+      BuildContext context, DateTime day, DateTime focusedDay) {
     final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.all(5),
@@ -33,7 +34,8 @@ class CalendarDayBuilderHelper {
   }
 
   /// Custom today builder
-  static Widget buildToday(BuildContext context, DateTime day, DateTime focusedDay) {
+  static Widget buildToday(
+      BuildContext context, DateTime day, DateTime focusedDay) {
     final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.all(5),
@@ -58,7 +60,8 @@ class CalendarDayBuilderHelper {
   }
 
   /// Custom marker builder showing dot indicators per event category
-  static Widget? buildMarker(BuildContext context, DateTime day, List<AppEvent> events) {
+  static Widget? buildMarker(
+      BuildContext context, DateTime day, List<AppEvent> events) {
     if (events.isEmpty) return null;
 
     final Set<Color> colors = {};
@@ -87,7 +90,8 @@ class CalendarDayBuilderHelper {
                 color: Colors.red,
                 shape: BoxShape.circle,
                 boxShadow: [
-                  BoxShadow(color: Colors.red.withValues(alpha: 0.5), blurRadius: 2)
+                  BoxShadow(
+                      color: Colors.red.withValues(alpha: 0.5), blurRadius: 2)
                 ],
               ),
             ),

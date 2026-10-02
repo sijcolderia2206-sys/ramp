@@ -10,7 +10,6 @@ import '../core/navigation/custom_page_transitions.dart';
 import '../core/theme/ramp_theme.dart';
 import '../core/services/reminder_launcher_service.dart';
 import 'ticket_form.dart';
-import 'live_dispatch_map_screen.dart';
 
 class MaintenanceScreen extends ConsumerStatefulWidget {
   const MaintenanceScreen({super.key});
@@ -21,6 +20,10 @@ class MaintenanceScreen extends ConsumerStatefulWidget {
 
 class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
   final Set<String> _expandedTicketIds = <String>{};
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+  String _sortOption = 'Newest';
+
   final List<String> _filters = [
     'All',
     'Schedule Visit',
@@ -37,6 +40,12 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) setState(() => _isLoading = false);
     });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   static final NumberFormat _currencyFormat = NumberFormat.currency(
@@ -197,7 +206,9 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                               child: OutlinedButton.icon(
                                 icon: const Icon(Icons.content_copy_rounded,
                                     size: 16),
-                                label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Send Reminder')),
+                                label: const FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text('Send Reminder')),
                                 onPressed: () async {
                                   final timeStr = exactTime != null
                                       ? exactTime!.format(context)
@@ -239,7 +250,9 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                                   backgroundColor: RampColors.primary,
                                   foregroundColor: Colors.white),
                               icon: const Icon(Icons.check_rounded, size: 16),
-                              label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Mark Visit Scheduled')),
+                              label: const FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text('Mark Visit Scheduled')),
                               onPressed: () {
                                 final formattedSlot = exactTime != null
                                     ? exactTime!.format(context)
@@ -617,7 +630,9 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                               child: OutlinedButton.icon(
                                 icon: const Icon(Icons.content_copy_rounded,
                                     size: 16),
-                                label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Send Reminder')),
+                                label: const FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text('Send Reminder')),
                                 onPressed: () async {
                                   final timeStr = exactTime != null
                                       ? exactTime!.format(context)
@@ -662,7 +677,9 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                                   backgroundColor: RampColors.primary,
                                   foregroundColor: Colors.white),
                               icon: const Icon(Icons.check_rounded, size: 16),
-                              label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Save Schedule')),
+                              label: const FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text('Save Schedule')),
                               onPressed: () {
                                 final formattedSlot = exactTime != null
                                     ? exactTime!.format(context)
@@ -711,7 +728,8 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                             label: const FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text('Mark Repair Fully Completed',
-                                  style: TextStyle(fontWeight: FontWeight.bold)),
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.bold)),
                             ),
                             onPressed: () {
                               _showCompletionSummarySheet(context, ticket);
@@ -926,8 +944,7 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) =>
-          AnimatedRepairProgressTimelineSheet(ticket: ticket),
+      builder: (context) => AnimatedRepairProgressTimelineSheet(ticket: ticket),
     );
   }
 
@@ -939,20 +956,67 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
     );
   }
 
+  Color _getStatusDotColor(Ticket ticket) {
+    if (ticket.status == 'Completed' ||
+        ticket.status == 'Closed' ||
+        ticket.status.toLowerCase() == 'resolved') {
+      return RampColors.success;
+    }
+    if (ticket.priority.toLowerCase() == 'urgent' ||
+        ticket.priority.toLowerCase() == 'emergency') {
+      return RampColors.danger;
+    }
+    if (ticket.priority.toLowerCase() == 'high') {
+      return RampColors.warning;
+    }
+    return RampColors.primary;
+  }
+
+  void _confirmDeleteTicket(BuildContext context, Ticket ticket) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Repair Ticket?'),
+        content: Text(
+            'Are you sure you want to delete "${ticket.title}" for ${ticket.unitNumber}? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('CANCEL'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: RampColors.danger),
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              ref.read(ticketProvider.notifier).deleteTicket(ticket.id);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  backgroundColor: RampColors.danger,
+                  content: Text('Deleted repair ticket for ${ticket.unitNumber}.'),
+                ),
+              );
+            },
+            child: const Text('DELETE'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTicketCard(Ticket ticket) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final foreground = theme.colorScheme.onSurface;
     final muted = theme.colorScheme.onSurfaceVariant;
     final completed = ticket.status == 'Completed' || ticket.status == 'Closed';
     final isExpanded = _expandedTicketIds.contains(ticket.id);
+    final statusColor = _getStatusDotColor(ticket);
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: theme.colorScheme.outlineVariant,
-        ),
+        boxShadow: null,
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -970,44 +1034,110 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
             children: [
               Row(
                 children: [
+                  // Single Colored Dot on the Left Side
+                  Container(
+                    width: 10,
+                    height: 10,
+                    margin: const EdgeInsets.only(right: 10),
+                    decoration: BoxDecoration(
+                      color: statusColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                   Expanded(
                     child: Text(
-                      ticket.title,
-                      maxLines: 1,
+                      ticket.title.replaceAll(RegExp(r'^Ticket:\s*', caseSensitive: false), ''),
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: foreground,
+                        fontSize: 15,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
+                  PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: Icon(Icons.more_vert_rounded, size: 20, color: muted),
+                    tooltip: 'Ticket Actions',
+                    onSelected: (val) {
+                      if (val == 'edit') {
+                        _openTicketForm(existingTicket: ticket);
+                      } else if (val == 'timeline') {
+                        _showTimelineModal(context, ticket);
+                      } else if (val == 'delete') {
+                        _confirmDeleteTicket(context, ticket);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined, size: 18),
+                            SizedBox(width: 8),
+                            Text('Edit Ticket'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'timeline',
+                        child: Row(
+                          children: [
+                            Icon(Icons.history_rounded, size: 18),
+                            SizedBox(width: 8),
+                            Text('View Timeline'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline_rounded,
+                                size: 18, color: RampColors.danger),
+                            SizedBox(width: 8),
+                            Text('Delete Ticket',
+                                style: TextStyle(color: RampColors.danger)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 4),
                   AnimatedRotation(
                     turns: isExpanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 180),
-                    child: Icon(Icons.keyboard_arrow_down_rounded, color: muted),
+                    child:
+                        Icon(Icons.keyboard_arrow_down_rounded, color: muted),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
-              Text(
-                '${ticket.unitNumber} \u2022 ${ticket.tenantName}',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontSize: 12,
-                  color: muted,
+              Padding(
+                padding: const EdgeInsets.only(left: 20.0),
+                child: Text(
+                  '${ticket.unitNumber} \u2022 ${ticket.tenantName}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 12,
+                    color: muted,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 12),
 
-              // Stage Status Pill, SLA Badge & Areas
+              // Stage Status Pill, Priority Badge & Areas
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: completed
                           ? const Color(0xFF059669).withValues(alpha: 0.15)
@@ -1026,20 +1156,23 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: ticket.isSlaBreached && !completed
+                      color: (ticket.priority.toLowerCase() == 'high' ||
+                              ticket.priority.toLowerCase() == 'urgent' ||
+                              ticket.priority.toLowerCase() == 'emergency')
                           ? const Color(0xFFEF4444).withValues(alpha: 0.15)
                           : const Color(0xFFF59E0B).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      ticket.isSlaBreached && !completed
-                          ? 'SLA BREACHED'
-                          : 'SLA: ${DateFormat("MMM dd").format(ticket.slaDueDate)} (${ticket.priority})',
+                      'Priority: ${ticket.priority}',
                       style: TextStyle(
                         fontSize: 11,
-                        color: ticket.isSlaBreached && !completed
+                        color: (ticket.priority.toLowerCase() == 'high' ||
+                                ticket.priority.toLowerCase() == 'urgent' ||
+                                ticket.priority.toLowerCase() == 'emergency')
                             ? const Color(0xFFEF4444)
                             : const Color(0xFFD97706),
                         fontWeight: FontWeight.bold,
@@ -1048,7 +1181,8 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                   ),
                   if (completed && ticket.rating > 0)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: const Color(0xFFEAB308).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
@@ -1056,7 +1190,8 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.star_rounded, size: 14, color: Color(0xFFEAB308)),
+                          const Icon(Icons.star_rounded,
+                              size: 14, color: Color(0xFFEAB308)),
                           const SizedBox(width: 4),
                           Text(
                             'Rating: ${ticket.rating}/5',
@@ -1088,153 +1223,163 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                 ],
               ),
 
-          if (isExpanded) ...[
-            const SizedBox(height: 14),
-            if (ticket.description.isNotEmpty) ...[
-              Text(ticket.description,
-                  style: GoogleFonts.poppins(fontSize: 13, color: muted)),
-              const SizedBox(height: 12),
-            ],
-
-            // Workflow Step Callouts
-            if (ticket.visitScheduledAt != null) ...[
-              Row(
-                children: [
-                  const Icon(Icons.event_available_rounded,
-                      size: 16, color: RampColors.primary),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                        'Visit Scheduled: ${DateFormat("MMM dd, yyyy").format(ticket.visitScheduledAt!)} (${ticket.visitTimeWindow})',
-                        style: GoogleFonts.poppins(
-                            fontSize: 12, fontWeight: FontWeight.w500)),
-                  ),
+              if (isExpanded) ...[
+                const SizedBox(height: 14),
+                if (ticket.description.isNotEmpty) ...[
+                  Text(ticket.description,
+                      style: GoogleFonts.poppins(fontSize: 13, color: muted)),
+                  const SizedBox(height: 12),
                 ],
-              ),
-              const SizedBox(height: 6),
-              if (ticket.visitReminderSent)
-                Text('Tenant visit reminder prepared',
-                    style: GoogleFonts.poppins(
-                        fontSize: 11, color: RampColors.success)),
-            ],
-            if (ticket.replacementItems.isNotEmpty ||
-                ticket.estimatedCost > 0) ...[
-              Row(
-                children: [
-                  const Icon(Icons.build_circle_outlined,
-                      size: 16, color: RampColors.warning),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                        'Estimate: ${_currencyFormat.format(ticket.estimatedCost)} (${ticket.replacementItems.join(", ")})',
-                        style: GoogleFonts.poppins(
-                            fontSize: 12, fontWeight: FontWeight.w500)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              if (ticket.repairReminderSent)
-                Text('Tenant repair reminder prepared',
-                    style: GoogleFonts.poppins(
-                        fontSize: 11, color: RampColors.success)),
-            ],
-            if (ticket.isCompletedStage &&
-                ticket.completionSummary.isNotEmpty) ...[
-              Text('Completed: ${ticket.completionSummary}',
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.poppins(
-                      fontSize: 12, fontWeight: FontWeight.w500)),
-              const SizedBox(height: 6),
-            ],
-            if (ticket.repairScheduledAt != null) ...[
-              Row(
-                children: [
-                  const Icon(Icons.handyman_rounded,
-                      size: 16, color: RampColors.success),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                        'Repair Date: ${DateFormat("MMM dd, yyyy").format(ticket.repairScheduledAt!)} by ${ticket.repairer}',
-                        style: GoogleFonts.poppins(
-                            fontSize: 12, fontWeight: FontWeight.w500)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-            ],
 
-            const Divider(height: 20),
-
-            // Progressive Stage Action Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showTimelineModal(context, ticket),
-                    icon: const Icon(Icons.history_rounded, size: 16),
-                    label: const FittedBox(fit: BoxFit.scaleDown, child: Text('TIMELINE')),
-                  ),
-                ),
-                const SizedBox(width: 8),
-
-                // Progressive Action Button based on current stage
-                if (ticket.isScheduleVisitStage)
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: RampColors.primary,
-                          foregroundColor: Colors.white),
-                      icon: const Icon(Icons.calendar_month_rounded, size: 16),
-                      label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Schedule Visit')),
-                      onPressed: () => _showScheduleVisitSheet(context, ticket),
-                    ),
-                  )
-                else if (ticket.isEstimateStage)
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: RampColors.warning,
-                          foregroundColor: Colors.white),
-                      icon: const Icon(Icons.attach_money_rounded, size: 16),
-                      label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Set Estimate')),
-                      onPressed: () => _showEstimateSheet(context, ticket),
-                    ),
-                  )
-                else if (ticket.isScheduleRepairStage)
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: RampColors.primary,
-                          foregroundColor: Colors.white),
-                      icon: const Icon(Icons.build_rounded, size: 16),
-                      label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Schedule Repair')),
-                      onPressed: () =>
-                          _showScheduleRepairSheet(context, ticket),
-                    ),
-                  )
-                else if (ticket.isCompletedStage)
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.check_circle_outline_rounded,
-                          size: 16, color: RampColors.success),
-                      label: const FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text('Summary',
-                            style: TextStyle(color: RampColors.success)),
+                // Workflow Step Callouts
+                if (ticket.visitScheduledAt != null) ...[
+                  Row(
+                    children: [
+                      const Icon(Icons.event_available_rounded,
+                          size: 16, color: RampColors.primary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                            'Visit Scheduled: ${DateFormat("MMM dd, yyyy").format(ticket.visitScheduledAt!)} (${ticket.visitTimeWindow})',
+                            style: GoogleFonts.poppins(
+                                fontSize: 12, fontWeight: FontWeight.w500)),
                       ),
-                      onPressed: () =>
-                          _showSavedCompletionSummary(context, ticket),
-                    ),
+                    ],
                   ),
+                  const SizedBox(height: 6),
+                  if (ticket.visitReminderSent)
+                    Text('Tenant visit reminder prepared',
+                        style: GoogleFonts.poppins(
+                            fontSize: 11, color: RampColors.success)),
+                ],
+                if (ticket.replacementItems.isNotEmpty ||
+                    ticket.estimatedCost > 0) ...[
+                  Row(
+                    children: [
+                      const Icon(Icons.build_circle_outlined,
+                          size: 16, color: RampColors.warning),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                            'Estimate: ${_currencyFormat.format(ticket.estimatedCost)} (${ticket.replacementItems.join(", ")})',
+                            style: GoogleFonts.poppins(
+                                fontSize: 12, fontWeight: FontWeight.w500)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  if (ticket.repairReminderSent)
+                    Text('Tenant repair reminder prepared',
+                        style: GoogleFonts.poppins(
+                            fontSize: 11, color: RampColors.success)),
+                ],
+                if (ticket.isCompletedStage &&
+                    ticket.completionSummary.isNotEmpty) ...[
+                  Text('Completed: ${ticket.completionSummary}',
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                          fontSize: 12, fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 6),
+                ],
+                if (ticket.repairScheduledAt != null) ...[
+                  Row(
+                    children: [
+                      const Icon(Icons.handyman_rounded,
+                          size: 16, color: RampColors.success),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                            'Repair Date: ${DateFormat("MMM dd, yyyy").format(ticket.repairScheduledAt!)} by ${ticket.repairer}',
+                            style: GoogleFonts.poppins(
+                                fontSize: 12, fontWeight: FontWeight.w500)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                ],
+
+                const Divider(height: 20),
+
+                // Progressive Stage Action Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _showTimelineModal(context, ticket),
+                        icon: const Icon(Icons.history_rounded, size: 16),
+                        label: const FittedBox(
+                            fit: BoxFit.scaleDown, child: Text('Timeline')),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Progressive Action Button based on current stage
+                    if (ticket.isScheduleVisitStage)
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: RampColors.primary,
+                              foregroundColor: Colors.white),
+                          icon: const Icon(Icons.calendar_month_rounded,
+                              size: 16),
+                          label: const FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text('Schedule Visit')),
+                          onPressed: () =>
+                              _showScheduleVisitSheet(context, ticket),
+                        ),
+                      )
+                    else if (ticket.isEstimateStage)
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: RampColors.warning,
+                              foregroundColor: Colors.white),
+                          icon:
+                              const Icon(Icons.attach_money_rounded, size: 16),
+                          label: const FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text('Set Estimate')),
+                          onPressed: () => _showEstimateSheet(context, ticket),
+                        ),
+                      )
+                    else if (ticket.isScheduleRepairStage)
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: RampColors.primary,
+                              foregroundColor: Colors.white),
+                          icon: const Icon(Icons.build_rounded, size: 16),
+                          label: const FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text('Schedule Repair')),
+                          onPressed: () =>
+                              _showScheduleRepairSheet(context, ticket),
+                        ),
+                      )
+                    else if (ticket.isCompletedStage)
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.check_circle_outline_rounded,
+                              size: 16, color: RampColors.success),
+                          label: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text('Summary',
+                                style: TextStyle(color: RampColors.success)),
+                          ),
+                          onPressed: () =>
+                              _showSavedCompletionSummary(context, ticket),
+                        ),
+                      ),
+                  ],
+                ),
               ],
-            ),
-          ],
-        ],
+            ],
+          ),
+        ),
       ),
-    ),
-  ),
-);
+    );
   }
 
   @override
@@ -1260,6 +1405,47 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
       }).toList();
     }
 
+    if (_searchQuery.trim().isNotEmpty) {
+      final q = _searchQuery.trim().toLowerCase();
+      displayTickets = displayTickets.where((t) {
+        final title = t.title.toLowerCase();
+        final unit = t.unitNumber.toLowerCase();
+        final tenant = t.tenantName.toLowerCase();
+        final category = t.category.toLowerCase();
+        final desc = t.description.toLowerCase();
+        final status = t.status.toLowerCase();
+        final priority = t.priority.toLowerCase();
+        final repairer = t.repairer.toLowerCase();
+        final id = t.id.toLowerCase();
+
+        return title.contains(q) ||
+            unit.contains(q) ||
+            tenant.contains(q) ||
+            category.contains(q) ||
+            desc.contains(q) ||
+            status.contains(q) ||
+            priority.contains(q) ||
+            repairer.contains(q) ||
+            id.contains(q) ||
+            t.affectedAreas.any((area) => area.toLowerCase().contains(q)) ||
+            t.replacementItems.any((item) => item.toLowerCase().contains(q));
+      }).toList();
+    }
+
+    displayTickets = List.from(displayTickets);
+    if (_sortOption == 'Newest') {
+      displayTickets.sort((a, b) => b.effectiveDate.compareTo(a.effectiveDate));
+    } else if (_sortOption == 'Oldest') {
+      displayTickets.sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate));
+    } else if (_sortOption == 'Priority High-First') {
+      final priorityRank = {'Emergency': 4, 'High': 3, 'Med': 2, 'Low': 1};
+      displayTickets.sort((a, b) => (priorityRank[b.priority] ?? 0)
+          .compareTo(priorityRank[a.priority] ?? 0));
+    } else if (_sortOption == 'Title A-Z') {
+      displayTickets.sort(
+          (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+    }
+
     return Scaffold(
       backgroundColor: isDark
           ? Theme.of(context).scaffoldBackgroundColor
@@ -1270,6 +1456,24 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                 fontWeight: FontWeight.w600,
                 color: isDark ? Colors.white : RampColors.slate)),
         elevation: 0,
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.sort, color: RampColors.primary),
+            tooltip: 'Sort Repairs',
+            onSelected: (val) => setState(() => _sortOption = val),
+            itemBuilder: (context) => [
+              'Newest',
+              'Oldest',
+              'Priority High-First',
+              'Title A-Z',
+            ]
+                .map((opt) => PopupMenuItem<String>(
+                      value: opt,
+                      child: Text('Sort by $opt'),
+                    ))
+                .toList(),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Align(
@@ -1293,6 +1497,79 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Search Bar
+                    TextField(
+                      controller: _searchCtrl,
+                      style: GoogleFonts.poppins(
+                        color: isDark ? Colors.white : RampColors.slate,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Search issue, unit, tenant, or area...',
+                        hintStyle: GoogleFonts.poppins(
+                          color: isDark
+                              ? const Color(0xFF94A3B8)
+                              : RampColors.mutedText,
+                        ),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none),
+                        enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(
+                                color: isDark
+                                    ? const Color(0xFF334155)
+                                    : RampColors.border)),
+                        prefixIcon:
+                            const Icon(Icons.search, color: RampColors.primary),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear_rounded, size: 18),
+                                onPressed: () {
+                                  _searchCtrl.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                              )
+                            : null,
+                      ),
+                      onChanged: (val) => setState(() => _searchQuery = val),
+                    ),
+                    if (_searchQuery.trim().isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(Icons.filter_list_rounded,
+                              size: 14, color: RampColors.primary),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Showing ${displayTickets.length} ${displayTickets.length == 1 ? 'ticket' : 'tickets'} matching "${_searchQuery.trim()}"',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: RampColors.primary,
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              _searchCtrl.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                            child: Text(
+                              'Clear',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: RampColors.primary,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+
                     // Status Filter Chips
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -1324,9 +1601,8 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                               ),
                               selected: isSelected,
                               onSelected: (_) {
-                                ref
-                                    .read(ticketFilterProvider.notifier)
-                                    .state = f;
+                                ref.read(ticketFilterProvider.notifier).state =
+                                    f;
                               },
                               selectedColor:
                                   Theme.of(context).colorScheme.primary,
@@ -1375,12 +1651,31 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                     else if (displayTickets.isEmpty)
                       EmptyStateWidget(
                         icon: Icons.build_circle_outlined,
-                        title: 'No Repairs Found',
-                        message:
-                            'No maintenance tickets match the selected status filter.',
-                        buttonText: 'Report Issue',
-                        buttonIcon: Icons.add,
-                        onButtonPressed: () => _openTicketForm(),
+                        title: _searchQuery.isNotEmpty || activeFilter != 'All'
+                            ? 'No Repairs Match Filters'
+                            : 'No Repairs Found',
+                        message: _searchQuery.isNotEmpty
+                            ? 'No maintenance tickets match "$_searchQuery". Try clearing your search or resetting filters.'
+                            : 'No maintenance tickets match the selected status filter.',
+                        buttonText:
+                            _searchQuery.isNotEmpty || activeFilter != 'All'
+                                ? 'Reset Filters & Search'
+                                : 'Report Issue',
+                        buttonIcon:
+                            _searchQuery.isNotEmpty || activeFilter != 'All'
+                                ? Icons.refresh_rounded
+                                : Icons.add,
+                        onButtonPressed: () {
+                          if (_searchQuery.isNotEmpty ||
+                              activeFilter != 'All') {
+                            _searchCtrl.clear();
+                            setState(() => _searchQuery = '');
+                            ref.read(ticketFilterProvider.notifier).state =
+                                'All';
+                          } else {
+                            _openTicketForm();
+                          }
+                        },
                       )
                     else
                       Column(
@@ -1418,8 +1713,8 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
 
 typedef MaintenanceTicketScreen = MaintenanceScreen;
 
-/// Animated Repair Progress Timeline Bottom Sheet with dynamic progress fill,
-/// glowing particle animations, milestone step indicators, and staggered timeline history.
+/// Repair Progress Timeline Bottom Sheet with dynamic progress fill,
+/// milestone step indicators, and staggered timeline history.
 class AnimatedRepairProgressTimelineSheet extends StatefulWidget {
   final Ticket ticket;
 
@@ -1435,12 +1730,9 @@ class AnimatedRepairProgressTimelineSheet extends StatefulWidget {
 
 class _AnimatedRepairProgressTimelineSheetState
     extends State<AnimatedRepairProgressTimelineSheet>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   late AnimationController _entranceController;
-  late AnimationController _pulseController;
   late Animation<double> _progressAnimation;
-  late Animation<double> _pulseScaleAnimation;
-  late Animation<double> _pulseGlowAnimation;
 
   double get _targetProgress {
     final status = widget.ticket.status.toLowerCase();
@@ -1477,13 +1769,8 @@ class _AnimatedRepairProgressTimelineSheetState
     super.initState();
     _entranceController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 600),
     );
-
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
 
     _progressAnimation = Tween<double>(
       begin: 0.0,
@@ -1491,27 +1778,7 @@ class _AnimatedRepairProgressTimelineSheetState
     ).animate(
       CurvedAnimation(
         parent: _entranceController,
-        curve: const Interval(0.1, 1.0, curve: Curves.easeOutCubic),
-      ),
-    );
-
-    _pulseScaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.25,
-    ).animate(
-      CurvedAnimation(
-        parent: _pulseController,
-        curve: Curves.easeInOut,
-      ),
-    );
-
-    _pulseGlowAnimation = Tween<double>(
-      begin: 0.25,
-      end: 0.85,
-    ).animate(
-      CurvedAnimation(
-        parent: _pulseController,
-        curve: Curves.easeInOut,
+        curve: Curves.easeOutCubic,
       ),
     );
 
@@ -1521,7 +1788,6 @@ class _AnimatedRepairProgressTimelineSheetState
   @override
   void dispose() {
     _entranceController.dispose();
-    _pulseController.dispose();
     super.dispose();
   }
 
@@ -1631,7 +1897,7 @@ class _AnimatedRepairProgressTimelineSheetState
                 children: [
                   // --- 1. ANIMATED PROGRESS BAR BANNER CARD ---
                   AnimatedBuilder(
-                    animation: Listenable.merge([_progressAnimation, _pulseController]),
+                    animation: _progressAnimation,
                     builder: (context, child) {
                       final progressVal = _progressAnimation.value;
                       final percentDisplay = (progressVal * 100).toInt();
@@ -1642,13 +1908,7 @@ class _AnimatedRepairProgressTimelineSheetState
                           color: cardBg,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: borderClr, width: 1),
-                          boxShadow: [
-                            BoxShadow(
-                              color: primaryColor.withValues(alpha: isDark ? 0.2 : 0.08),
-                              blurRadius: 16,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
+                          boxShadow: null,
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1675,7 +1935,9 @@ class _AnimatedRepairProgressTimelineSheetState
                                       style: GoogleFonts.poppins(
                                         fontSize: 13,
                                         fontWeight: FontWeight.bold,
-                                        color: isDark ? Colors.white : RampColors.slate,
+                                        color: isDark
+                                            ? Colors.white
+                                            : RampColors.slate,
                                       ),
                                     ),
                                   ],
@@ -1684,7 +1946,9 @@ class _AnimatedRepairProgressTimelineSheetState
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 10, vertical: 5),
                                   decoration: BoxDecoration(
-                                    color: (progressVal == 1.0 ? completedColor : primaryColor)
+                                    color: (progressVal == 1.0
+                                            ? completedColor
+                                            : primaryColor)
                                         .withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
@@ -1707,7 +1971,8 @@ class _AnimatedRepairProgressTimelineSheetState
                             LayoutBuilder(
                               builder: (context, constraints) {
                                 final totalWidth = constraints.maxWidth;
-                                final filledWidth = (totalWidth * progressVal).clamp(0.0, totalWidth);
+                                final filledWidth = (totalWidth * progressVal)
+                                    .clamp(0.0, totalWidth);
 
                                 return Stack(
                                   clipBehavior: Clip.none,
@@ -1726,7 +1991,8 @@ class _AnimatedRepairProgressTimelineSheetState
 
                                     // Animated Gradient Fill
                                     AnimatedContainer(
-                                      duration: const Duration(milliseconds: 50),
+                                      duration:
+                                          const Duration(milliseconds: 50),
                                       height: 12,
                                       width: filledWidth,
                                       decoration: BoxDecoration(
@@ -1739,44 +2005,25 @@ class _AnimatedRepairProgressTimelineSheetState
                                                 : const Color(0xFF00D2FF),
                                           ],
                                         ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: (progressVal == 1.0
-                                                    ? completedColor
-                                                    : primaryColor)
-                                                .withValues(alpha: _pulseGlowAnimation.value),
-                                            blurRadius: 10,
-                                            spreadRadius: 1,
-                                          ),
-                                        ],
                                       ),
                                     ),
 
-                                    // Pulsating Leading Dot
-                                    if (filledWidth > 10 && filledWidth < totalWidth)
+                                    // Indicator Leading Dot
+                                    if (filledWidth > 10 &&
+                                        filledWidth < totalWidth)
                                       Positioned(
-                                        left: (filledWidth - 8).clamp(0.0, totalWidth - 16),
+                                        left: (filledWidth - 8)
+                                            .clamp(0.0, totalWidth - 16),
                                         top: -2,
-                                        child: Transform.scale(
-                                          scale: _pulseScaleAnimation.value,
-                                          child: Container(
-                                            width: 16,
-                                            height: 16,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: Colors.white,
-                                              border: Border.all(
-                                                color: primaryColor,
-                                                width: 3,
-                                              ),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: primaryColor.withValues(
-                                                      alpha: _pulseGlowAnimation.value),
-                                                  blurRadius: 8,
-                                                  spreadRadius: 2,
-                                                ),
-                                              ],
+                                        child: Container(
+                                          width: 16,
+                                          height: 16,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: Colors.white,
+                                            border: Border.all(
+                                              color: primaryColor,
+                                              width: 3,
                                             ),
                                           ),
                                         ),
@@ -1805,43 +2052,27 @@ class _AnimatedRepairProgressTimelineSheetState
                           : (isCurrent ? primaryColor : borderClr);
                       final stepFg = (isPassed || isCurrent)
                           ? Colors.white
-                          : (isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8));
+                          : (isDark
+                              ? const Color(0xFF64748B)
+                              : const Color(0xFF94A3B8));
 
                       return Expanded(
                         child: Column(
                           children: [
-                            AnimatedBuilder(
-                              animation: _pulseController,
-                              builder: (context, child) {
-                                return Transform.scale(
-                                  scale: isCurrent ? _pulseScaleAnimation.value : 1.0,
-                                  child: Container(
-                                    width: 38,
-                                    height: 38,
-                                    decoration: BoxDecoration(
-                                      color: stepBg,
-                                      shape: BoxShape.circle,
-                                      boxShadow: isCurrent
-                                          ? [
-                                              BoxShadow(
-                                                color: primaryColor.withValues(
-                                                    alpha: _pulseGlowAnimation.value),
-                                                blurRadius: 12,
-                                                spreadRadius: 2,
-                                              )
-                                            ]
-                                          : [],
-                                    ),
-                                    child: Icon(
-                                      isPassed
-                                          ? Icons.check_rounded
-                                          : (steps[idx]['icon'] as IconData),
-                                      color: stepFg,
-                                      size: 18,
-                                    ),
-                                  ),
-                                );
-                              },
+                            Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: stepBg,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isPassed
+                                    ? Icons.check_rounded
+                                    : (steps[idx]['icon'] as IconData),
+                                color: stepFg,
+                                size: 18,
+                              ),
                             ),
                             const SizedBox(height: 6),
                             FittedBox(
@@ -1856,7 +2087,9 @@ class _AnimatedRepairProgressTimelineSheetState
                                   color: isCurrent
                                       ? primaryColor
                                       : (isPassed
-                                          ? (isDark ? Colors.white : RampColors.slate)
+                                          ? (isDark
+                                              ? Colors.white
+                                              : RampColors.slate)
                                           : (isDark
                                               ? const Color(0xFF64748B)
                                               : RampColors.mutedText)),
@@ -1889,7 +2122,8 @@ class _AnimatedRepairProgressTimelineSheetState
                     itemCount: widget.ticket.statusHistory.length,
                     itemBuilder: (context, index) {
                       final item = widget.ticket.statusHistory[index];
-                      final isLast = index == widget.ticket.statusHistory.length - 1;
+                      final isLast =
+                          index == widget.ticket.statusHistory.length - 1;
 
                       return TweenAnimationBuilder<double>(
                         duration: Duration(milliseconds: 400 + (index * 100)),
@@ -1946,8 +2180,8 @@ class _AnimatedRepairProgressTimelineSheetState
                                     Expanded(
                                       child: Container(
                                         width: 2,
-                                        margin:
-                                            const EdgeInsets.symmetric(vertical: 4),
+                                        margin: const EdgeInsets.symmetric(
+                                            vertical: 4),
                                         color: isDark
                                             ? const Color(0xFF334155)
                                             : const Color(0xFFE2E8F0),
@@ -1965,10 +2199,12 @@ class _AnimatedRepairProgressTimelineSheetState
                                   decoration: BoxDecoration(
                                     color: cardBg,
                                     borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(color: borderClr, width: 1),
+                                    border:
+                                        Border.all(color: borderClr, width: 1),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         mainAxisAlignment:

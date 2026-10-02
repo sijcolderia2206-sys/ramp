@@ -28,8 +28,10 @@ class PersistenceTask {
         'isDelete': isDelete,
       };
 
-  factory PersistenceTask.fromJson(Map<String, dynamic> json) => PersistenceTask(
-        id: json['id'] as String? ?? 'task_${DateTime.now().millisecondsSinceEpoch}',
+  factory PersistenceTask.fromJson(Map<String, dynamic> json) =>
+      PersistenceTask(
+        id: json['id'] as String? ??
+            'task_${DateTime.now().millisecondsSinceEpoch}',
         collection: json['collection'] as String? ?? '',
         documentId: json['documentId'] as String? ?? '',
         data: json['data'] as Map<String, dynamic>?,
@@ -63,8 +65,10 @@ class PersistenceQueueState {
   }
 }
 
-typedef UpsertHandler = Future<void> Function(String collection, String documentId, Map<String, dynamic> data);
-typedef DeleteHandler = Future<void> Function(String collection, String documentId);
+typedef UpsertHandler = Future<void> Function(
+    String collection, String documentId, Map<String, dynamic> data);
+typedef DeleteHandler = Future<void> Function(
+    String collection, String documentId);
 
 class PersistenceQueue extends ValueNotifier<PersistenceQueueState> {
   static const String _storageKey = 'ramp_persistence_queue_tasks';
@@ -104,7 +108,8 @@ class PersistenceQueue extends ValueNotifier<PersistenceQueueState> {
         final loadedTasks = rawList
             .map((item) {
               try {
-                return PersistenceTask.fromJson(jsonDecode(item) as Map<String, dynamic>);
+                return PersistenceTask.fromJson(
+                    jsonDecode(item) as Map<String, dynamic>);
               } catch (_) {
                 return null;
               }
@@ -125,14 +130,16 @@ class PersistenceQueue extends ValueNotifier<PersistenceQueueState> {
   Future<void> _persistTasksToDisk() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final jsonList = value.tasks.map((task) => jsonEncode(task.toJson())).toList();
+      final jsonList =
+          value.tasks.map((task) => jsonEncode(task.toJson())).toList();
       await prefs.setStringList(_storageKey, jsonList);
     } catch (e) {
       debugPrint('⚠️ Error persisting offline tasks to disk: $e');
     }
   }
 
-  void enqueueUpsert(String collection, String documentId, Map<String, dynamic> data) {
+  void enqueueUpsert(
+      String collection, String documentId, Map<String, dynamic> data) {
     final task = PersistenceTask(
       id: 'task_${DateTime.now().millisecondsSinceEpoch}',
       collection: collection,
@@ -175,7 +182,8 @@ class PersistenceQueue extends ValueNotifier<PersistenceQueueState> {
         if (_deleteHandler != null) {
           await _deleteHandler!(task.collection, task.documentId);
         } else {
-          await SupabaseService().deleteRecord(task.collection, task.documentId);
+          await SupabaseService()
+              .deleteRecord(task.collection, task.documentId);
         }
       } else if (task.data != null) {
         if (_upsertHandler != null) {

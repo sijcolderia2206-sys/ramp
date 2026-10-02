@@ -90,7 +90,6 @@ void main() {
       current.statusHistory.map((entry) => entry.status),
       containsAllInOrder([
         'Schedule Visit',
-        'Schedule Visit',
         'Estimate',
         'Schedule Repair',
         'Schedule Repair',
@@ -119,7 +118,8 @@ void main() {
     expect(notifier.prepareTicketVisitReminder(ticket.id), isFalse);
   });
 
-  test('estimate creates one unit expense without changing rent accounting', () {
+  test('estimate creates one unit expense without changing rent accounting',
+      () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
     final notifier = container.read(ticketProvider.notifier);

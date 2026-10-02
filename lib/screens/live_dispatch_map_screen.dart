@@ -64,8 +64,8 @@ class _LiveDispatchMapScreenState extends ConsumerState<LiveDispatchMapScreen>
   @override
   void initState() {
     super.initState();
-    _unitCoordinates = widget.unitLocation ??
-        LocationService.defaultPagsanjanCoordinates;
+    _unitCoordinates =
+        widget.unitLocation ?? LocationService.defaultPagsanjanCoordinates;
 
     // Pulse Animation for GPS Beacon
     _pulseController = AnimationController(
@@ -123,7 +123,8 @@ class _LiveDispatchMapScreenState extends ConsumerState<LiveDispatchMapScreen>
   }
 
   /// Calculates and snaps to real street directions using OSRM
-  Future<void> _updateRoadRouteIfNeeded(LatLng origin, {bool force = false}) async {
+  Future<void> _updateRoadRouteIfNeeded(LatLng origin,
+      {bool force = false}) async {
     if (_isFetchingRoute) return;
 
     // Only re-route if distance shifted by > 15 meters or forced
@@ -233,9 +234,8 @@ class _LiveDispatchMapScreenState extends ConsumerState<LiveDispatchMapScreen>
     });
 
     final currentTechLoc = liveTechLocAsync.valueOrNull;
-    final activeVehiclePoint = _animatedTechPosition ??
-        currentTechLoc?.toLatLng ??
-        _myCurrentLocation;
+    final activeVehiclePoint =
+        _animatedTechPosition ?? currentTechLoc?.toLatLng ?? _myCurrentLocation;
 
     return Scaffold(
       appBar: AppBar(
@@ -613,7 +613,7 @@ class _LiveDispatchMapScreenState extends ConsumerState<LiveDispatchMapScreen>
             right: 16,
             bottom: 24,
             child: Card(
-              elevation: 12,
+              elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(22),
               ),
@@ -642,8 +642,8 @@ class _LiveDispatchMapScreenState extends ConsumerState<LiveDispatchMapScreen>
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: RampColors.primary
-                                    .withValues(alpha: 0.15),
+                                color:
+                                    RampColors.primary.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: const Icon(

@@ -1,6 +1,5 @@
 // lib/core/services/receipt_ocr_service.dart
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:image_picker/image_picker.dart';
@@ -42,8 +41,8 @@ class ReceiptScanResult {
       if (json['amount'] is num) {
         parsedAmount = (json['amount'] as num).toDouble();
       } else if (json['amount'] is String) {
-        final cleanStr = (json['amount'] as String)
-            .replaceAll(RegExp(r'[^\d.]'), '');
+        final cleanStr =
+            (json['amount'] as String).replaceAll(RegExp(r'[^\d.]'), '');
         parsedAmount = double.tryParse(cleanStr);
       }
     }
@@ -99,7 +98,8 @@ class ReceiptOcrService {
     String mimeType = 'image/jpeg',
   }) async {
     if (_geminiApiKey.isEmpty) {
-      debugPrint('⚠️ GEMINI_API_KEY not set. Falling back to pattern matching mock OCR.');
+      debugPrint(
+          '⚠️ GEMINI_API_KEY not set. Falling back to pattern matching mock OCR.');
       return _fallbackRegexOcr(bytes);
     }
 
@@ -179,7 +179,8 @@ Output Format:
   /// Lightweight fallback heuristic when offline or missing API keys.
   ReceiptScanResult _fallbackRegexOcr(Uint8List bytes) {
     // Generate a simulated extracted result for development testing when API key is unconfigured
-    final simulatedRef = 'GC-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
+    final simulatedRef =
+        'GC-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
     return ReceiptScanResult(
       isSuccess: true,
       referenceNumber: simulatedRef,

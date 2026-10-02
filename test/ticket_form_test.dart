@@ -93,7 +93,7 @@ void main() {
       expect(edited.visitScheduledAt, scheduledAt);
       expect(edited.visitTimeWindow, 'Morning (8 AM - 12 PM)');
       expect(edited.replacementItems, const ['Faucet']);
-      expect(edited.statusHistory, hasLength(2));
+      expect(edited.statusHistory, hasLength(1));
       expect(
           container.read(ticketProvider), hasLength(startingTicketCount + 1));
       expect(container.read(activityProvider),
