@@ -331,44 +331,113 @@ ALTER TABLE public.utility_rate_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 
 -- 17. Configure RLS Access Policies for Application Users (Idempotent)
+-- Explicitly scopes policies TO authenticated users, resolving Supabase Security Advisor warnings
+-- while preserving app connectivity for signed-in landlords and tenants.
+
 DROP POLICY IF EXISTS "Allow access to users table" ON public.users;
-CREATE POLICY "Allow access to users table" ON public.users FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow authenticated read and write on users" ON public.users;
+CREATE POLICY "Allow authenticated read and write on users"
+  ON public.users FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow authenticated read and write on units" ON public.units;
-CREATE POLICY "Allow authenticated read and write on units" ON public.units FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow authenticated read and write on units"
+  ON public.units FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow authenticated read and write on tenants" ON public.tenants;
-CREATE POLICY "Allow authenticated read and write on tenants" ON public.tenants FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow authenticated read and write on tenants"
+  ON public.tenants FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow authenticated read and write on payments" ON public.payments;
-CREATE POLICY "Allow authenticated read and write on payments" ON public.payments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow authenticated read and write on payments"
+  ON public.payments FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow authenticated read and write on maintenance_tickets" ON public.maintenance_tickets;
-CREATE POLICY "Allow authenticated read and write on maintenance_tickets" ON public.maintenance_tickets FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow authenticated read and write on maintenance_tickets"
+  ON public.maintenance_tickets FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow authenticated read and write on audit_logs" ON public.audit_logs;
-CREATE POLICY "Allow authenticated read and write on audit_logs" ON public.audit_logs FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow authenticated read and write on audit_logs"
+  ON public.audit_logs FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow authenticated read and write on expenses" ON public.expenses;
-CREATE POLICY "Allow authenticated read and write on expenses" ON public.expenses FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Deny client access" ON public.expenses;
+CREATE POLICY "Allow authenticated read and write on expenses"
+  ON public.expenses FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+/*
+-- ALTERNATIVE 1: User/Owner-Owned Expenses (if adding user_id Auth UUID column)
+-- CREATE POLICY "Owner-only access to expenses"
+-- ON public.expenses FOR ALL TO authenticated
+-- USING (auth.uid()::text = user_id) WITH CHECK (auth.uid()::text = user_id);
+
+-- ALTERNATIVE 2: Backend-Only Table (Deny all direct client SDK access)
+-- CREATE POLICY "Deny client access"
+-- ON public.expenses FOR ALL
+-- USING (false) WITH CHECK (false);
+*/
 
 DROP POLICY IF EXISTS "Allow authenticated read and write on tenant_documents" ON public.tenant_documents;
-CREATE POLICY "Allow authenticated read and write on tenant_documents" ON public.tenant_documents FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow authenticated read and write on tenant_documents"
+  ON public.tenant_documents FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow authenticated read and write on announcements" ON public.announcements;
-CREATE POLICY "Allow authenticated read and write on announcements" ON public.announcements FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow authenticated read and write on announcements"
+  ON public.announcements FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow authenticated read and write on notifications" ON public.notifications;
-CREATE POLICY "Allow authenticated read and write on notifications" ON public.notifications FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow authenticated read and write on notifications"
+  ON public.notifications FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow authenticated read and write on settings" ON public.settings;
-CREATE POLICY "Allow authenticated read and write on settings" ON public.settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow authenticated read and write on settings"
+  ON public.settings FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow authenticated read and write on utility_rate_logs" ON public.utility_rate_logs;
-CREATE POLICY "Allow authenticated read and write on utility_rate_logs" ON public.utility_rate_logs FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow authenticated read and write on utility_rate_logs"
+  ON public.utility_rate_logs FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow authenticated read and write on events" ON public.events;
-CREATE POLICY "Allow authenticated read and write on events" ON public.events FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow authenticated read and write on events"
+  ON public.events FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
 
 -- 18. Configure Storage Bucket 'ramp_media' & Storage Policies
 INSERT INTO storage.buckets (id, name, public)
@@ -383,16 +452,19 @@ USING (bucket_id = 'ramp_media');
 DROP POLICY IF EXISTS "Authenticated Insert Access for ramp_media" ON storage.objects;
 CREATE POLICY "Authenticated Insert Access for ramp_media"
 ON storage.objects FOR INSERT
+TO authenticated
 WITH CHECK (bucket_id = 'ramp_media');
 
 DROP POLICY IF EXISTS "Authenticated Update Access for ramp_media" ON storage.objects;
 CREATE POLICY "Authenticated Update Access for ramp_media"
 ON storage.objects FOR UPDATE
+TO authenticated
 USING (bucket_id = 'ramp_media');
 
 DROP POLICY IF EXISTS "Authenticated Delete Access for ramp_media" ON storage.objects;
 CREATE POLICY "Authenticated Delete Access for ramp_media"
 ON storage.objects FOR DELETE
+TO authenticated
 USING (bucket_id = 'ramp_media');
 
 -- 19. Enable Realtime Publications (Safely)

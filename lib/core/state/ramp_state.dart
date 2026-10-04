@@ -3166,6 +3166,13 @@ Future<void> hydratePersistentAppData(WidgetRef ref) async {
     fetchCollection('utilityRateLogs'),
   ]);
 
+  final hasAnyData = results.any((list) => list.isNotEmpty);
+  if (!hasAnyData) {
+    debugPrint(
+        'ℹ️ Offline or no database records returned. Retaining local app state.');
+    return;
+  }
+
   final units = results[0].map(_unitFromDb).toList();
   final tenants = results[1].map(_tenantFromDb).toList();
   final payments = results[2].map(_paymentFromDb).toList();

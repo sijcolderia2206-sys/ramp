@@ -1171,13 +1171,12 @@ class _PropertyUnitCard extends StatefulWidget {
   final VoidCallback onDelete;
 
   const _PropertyUnitCard({
-    Key? key,
     required this.unit,
     this.tenant,
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   State<_PropertyUnitCard> createState() => _PropertyUnitCardState();
@@ -1281,9 +1280,10 @@ class _PropertyUnitCardState extends State<_PropertyUnitCard> {
 
   Color _getStatusColor(String status) {
     final s = status.toLowerCase();
-    if (s == 'occupied') return RampColors.primary;
-    if (s == 'maintenance') return RampColors.warning;
-    return RampColors.success;
+    if (s == 'occupied') return const Color(0xFF16A34A); // Green-600 for better white text contrast
+    if (s == 'vacant') return const Color(0xFF2563EB); // Blue-600
+    if (s == 'maintenance') return const Color(0xFFEA580C); // Orange-600 for better white text contrast
+    return const Color(0xFF2563EB);
   }
 
   IconData _getStatusIcon(String status) {
@@ -2022,14 +2022,24 @@ class _PropertyUnitCardState extends State<_PropertyUnitCard> {
 
   IconData _getInclusionIcon(String name) {
     final lower = name.toLowerCase();
-    if (lower.contains('water')) return Icons.water_drop_outlined;
-    if (lower.contains('electric')) return Icons.bolt_outlined;
-    if (lower.contains('wifi') || lower.contains('internet'))
+    if (lower.contains('water')) {
+      return Icons.water_drop_outlined;
+    }
+    if (lower.contains('electric')) {
+      return Icons.bolt_outlined;
+    }
+    if (lower.contains('wifi') || lower.contains('internet')) {
       return Icons.wifi_rounded;
-    if (lower.contains('aircon') || lower.contains('ac'))
+    }
+    if (lower.contains('aircon') || lower.contains('ac')) {
       return Icons.ac_unit_rounded;
-    if (lower.contains('parking')) return Icons.local_parking_rounded;
-    if (lower.contains('kitchen')) return Icons.kitchen_rounded;
+    }
+    if (lower.contains('parking')) {
+      return Icons.local_parking_rounded;
+    }
+    if (lower.contains('kitchen')) {
+      return Icons.kitchen_rounded;
+    }
     return Icons.check_circle_outline_rounded;
   }
 }

@@ -41,10 +41,21 @@ class UserDatabaseService {
       // 2. Fallback to Firestore users collection
       DocumentSnapshot<Map<String, dynamic>>? doc;
       try {
-        doc = await _firestore.collection(_usersCollection).doc(uid).get();
-      } catch (e) {
-        debugPrint('ℹ️ Firestore getUserProfile notice [$uid]: $e');
-        return Result.failure('Firestore unavailable for user profile.', e);
+        doc = await _firestore
+            .collection(_usersCollection)
+            .doc(uid)
+            .get(const GetOptions(source: Source.serverAndCache))
+            .timeout(const Duration(seconds: 3));
+      } catch (_) {
+        try {
+          doc = await _firestore
+              .collection(_usersCollection)
+              .doc(uid)
+              .get(const GetOptions(source: Source.cache));
+        } catch (e) {
+          debugPrint('ℹ️ Firestore getUserProfile notice [$uid]: $e');
+          return Result.failure('Firestore unavailable for user profile.', e);
+        }
       }
 
       if (!doc.exists || doc.data() == null) {

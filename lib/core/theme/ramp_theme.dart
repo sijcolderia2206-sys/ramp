@@ -474,15 +474,21 @@ class StatusPill extends StatelessWidget {
 
     if (lower == 'occupied') {
       return _PillConfig(
+        textColor: isDark ? const Color(0xFF8CC9A8) : RampColors.success,
+        backgroundColor:
+            isDark ? const Color(0xFF1E3028) : RampColors.successTint,
+      );
+    } else if (lower == 'vacant') {
+      return _PillConfig(
         textColor: isDark ? const Color(0xFF9AB4E8) : RampColors.primary,
         backgroundColor:
             isDark ? const Color(0xFF202B3D) : RampColors.softBlueTint,
       );
-    } else if (lower == 'vacant') {
+    } else if (lower == 'maintenance') {
       return _PillConfig(
-        textColor: isDark ? const Color(0xFF8CC9A8) : RampColors.success,
+        textColor: isDark ? const Color(0xFFFCD34D) : const Color(0xFFE65100), // Dark Orange
         backgroundColor:
-            isDark ? const Color(0xFF1E3028) : RampColors.successTint,
+            isDark ? const Color(0xFF452A10) : const Color(0xFFFFF3E0), // Orange Tint
       );
     } else if (lower == 'paid' || lower == 'verified' || lower == 'resolved') {
       return _PillConfig(

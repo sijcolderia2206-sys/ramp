@@ -117,7 +117,11 @@ class SupabaseService {
 
   Future<bool> testDatabaseConnection() async {
     try {
-      final response = await _client.from('units').select().limit(1);
+      final response = await _client
+          .from('units')
+          .select()
+          .limit(1)
+          .timeout(const Duration(seconds: 3));
       debugPrint(
           '✅ Supabase Database Connected! (Returned ${response.length} rows)');
       return true;
@@ -130,7 +134,10 @@ class SupabaseService {
   Future<Result<List<Map<String, dynamic>>>> loadTable(String tableName) async {
     final targetTable = mapTableName(tableName);
     try {
-      final response = await _client.from(targetTable).select();
+      final response = await _client
+          .from(targetTable)
+          .select()
+          .timeout(const Duration(seconds: 3));
       final data = List<Map<String, dynamic>>.from(response)
           .map((row) => toCamelCaseMap(row))
           .toList();
@@ -164,7 +171,10 @@ class SupabaseService {
     final sanitizedData = sanitizeAndValidatePayload(tableName, data);
     final payload = toSnakeCaseMap(sanitizedData);
     try {
-      await _client.from(targetTable).upsert(payload);
+      await _client
+          .from(targetTable)
+          .upsert(payload)
+          .timeout(const Duration(seconds: 5));
       return Result.success(null);
     } catch (e) {
       debugPrint('❌ Supabase upsertRecord error for [$targetTable]: $e');
@@ -175,7 +185,11 @@ class SupabaseService {
   Future<Result<void>> deleteRecord(String tableName, String id) async {
     final targetTable = mapTableName(tableName);
     try {
-      await _client.from(targetTable).delete().eq('id', id);
+      await _client
+          .from(targetTable)
+          .delete()
+          .eq('id', id)
+          .timeout(const Duration(seconds: 5));
       return Result.success(null);
     } catch (e) {
       debugPrint('❌ Supabase deleteRecord error for [$targetTable]: $e');

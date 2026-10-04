@@ -98,15 +98,15 @@ class _RampAppState extends ConsumerState<RampApp> {
     return MaterialApp(
       title: 'RAMP',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: RampTheme.lightTheme,
+      darkTheme: RampTheme.darkTheme,
       themeMode: themeMode,
       builder: (context, child) {
         final isDark = themeMode == ThemeMode.dark ||
             (themeMode == ThemeMode.system &&
                 MediaQuery.platformBrightnessOf(context) == Brightness.dark);
         return AnimatedTheme(
-          data: isDark ? AppTheme.darkTheme : AppTheme.lightTheme,
+          data: isDark ? RampTheme.darkTheme : RampTheme.lightTheme,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
           child: child ?? const SizedBox.shrink(),
@@ -291,6 +291,38 @@ class LandlordShell extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class GradientIcon extends StatelessWidget {
+  final IconData icon;
+  final double size;
+  final Gradient? gradient;
+
+  const GradientIcon({
+    super.key,
+    required this.icon,
+    this.size = 24.0,
+    this.gradient,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveGradient = gradient ??
+        const LinearGradient(
+          colors: [Color(0xFF0052CC), Color(0xFF0284C7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+
+    return ShaderMask(
+      shaderCallback: (bounds) => effectiveGradient.createShader(bounds),
+      child: Icon(
+        icon,
+        size: size,
+        color: Colors.white,
       ),
     );
   }

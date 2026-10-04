@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // coverage:ignore-file
-// ignore_for_file: type=lint, type=warning, deprecated_member_use, deprecated_member_use_from_same_package
+// ignore_for_file: type=lint
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
 part of 'rental_unit.dart';
@@ -9,7 +9,6 @@ part of 'rental_unit.dart';
 // FreezedGenerator
 // **************************************************************************
 
-// GENERATED CODE - DO NOT MODIFY BY HAND
 // dart format off
 T _$identity<T>(T value) => value;
 
@@ -290,7 +289,7 @@ class _$UnitCopyWithImpl<$Res> implements $UnitCopyWith<$Res> {
     Object? electricityRateOverride = freezed,
     Object? maintenanceAreas = null,
   }) {
-    return _then(Unit(
+    return _then(_self.copyWith(
       id: null == id
           ? _self.id
           : id // ignore: cast_nullable_to_non_nullable
@@ -865,9 +864,9 @@ class _Unit extends Unit {
       this.areaSqm = 28.0,
       this.bedrooms = 1,
       this.bathrooms = 1,
-      List<String> amenities = const [],
-      List<String> inclusions = const ['Water', 'Electricity', 'Wifi'],
-      List<String> images = const [],
+      final List<String> amenities = const [],
+      final List<String> inclusions = const ['Water', 'Electricity', 'Wifi'],
+      final List<String> images = const [],
       this.imageUrl,
       this.tenantId,
       this.tenantName,
@@ -887,7 +886,7 @@ class _Unit extends Unit {
       this.electricityUtilityEnabled = true,
       this.waterRateOverride,
       this.electricityRateOverride,
-      List<String> maintenanceAreas = const [
+      final List<String> maintenanceAreas = const [
         'Bathroom',
         'Bedroom',
         'Indoor Area',

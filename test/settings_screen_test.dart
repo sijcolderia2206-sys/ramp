@@ -17,8 +17,8 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             child: MaterialApp(
-              theme: AppTheme.lightTheme,
-              darkTheme: AppTheme.darkTheme,
+              theme: RampTheme.lightTheme,
+              darkTheme: RampTheme.darkTheme,
               themeMode: brightness == Brightness.dark
                   ? ThemeMode.dark
                   : ThemeMode.light,

@@ -12,7 +12,17 @@ class FirestoreService {
   Future<Result<List<Map<String, dynamic>>>> loadCollectionResult(
       String name) async {
     try {
-      final snapshot = await _firestore.collection(name).get();
+      QuerySnapshot<Map<String, dynamic>> snapshot;
+      try {
+        snapshot = await _firestore
+            .collection(name)
+            .get(const GetOptions(source: Source.serverAndCache))
+            .timeout(const Duration(seconds: 3));
+      } catch (_) {
+        snapshot = await _firestore
+            .collection(name)
+            .get(const GetOptions(source: Source.cache));
+      }
       final docs = snapshot.docs
           .map((document) => {'id': document.id, ...document.data()})
           .toList();

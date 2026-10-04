@@ -24,17 +24,7 @@ class _UnitDetailScreenState extends ConsumerState<UnitDetailScreen> {
     decimalDigits: 2,
   );
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'occupied':
-        return RampColors.success;
-      case 'maintenance':
-        return RampColors.warning;
-      case 'vacant':
-      default:
-        return RampColors.primary;
-    }
-  }
+
 
   void _showUtilityHistoryModal(BuildContext context, Unit unit) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -782,9 +772,7 @@ class _UnitDetailScreenState extends ConsumerState<UnitDetailScreen> {
                       color: isDark ? Colors.white : RampColors.slate,
                     ),
                   ),
-                  StatusPill(
-                      status: unit.status,
-                      customTextColor: _getStatusColor(unit.status)),
+                  StatusPill(status: unit.status),
                 ],
               ),
               const SizedBox(height: 4),
