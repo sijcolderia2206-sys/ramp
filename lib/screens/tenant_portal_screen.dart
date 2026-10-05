@@ -8,10 +8,12 @@ import 'package:intl/intl.dart';
 import '../core/services/receipt_ocr_service.dart';
 import '../core/services/user_database_service.dart';
 import '../core/theme/ramp_theme.dart';
+import '../core/utils/toast_service.dart';
 import '../core/validation/app_validators.dart';
 import '../providers/providers.dart';
 import '../core/widgets/core_widgets.dart';
 import '../widgets/receipt_modal.dart';
+import '../core/widgets/clay_container.dart';
 
 class TenantPortalScreen extends ConsumerStatefulWidget {
   const TenantPortalScreen({super.key});
@@ -166,14 +168,8 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
 
                         if (!context.mounted) return;
                         Navigator.pop(dialogCtx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                                'Password updated successfully! Welcome to your portal.'),
-                            backgroundColor: RampColors.success,
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
+                        ToastService.showSuccess(
+                            'Password updated successfully! Welcome to your portal.');
                       },
               ),
             ],
@@ -242,7 +238,7 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
         activeTenant.monthlyRent + waterCharge + electricCharge + lateFee;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
       appBar: AppBar(
         title: Text(
           'Tenant Portal',
@@ -259,13 +255,7 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
               label: const Text('Landlord Mode'),
               onPressed: () {
                 ref.read(rampProvider.notifier).setRole('landlord');
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Switched to Landlord Admin View'),
-                    backgroundColor: RampColors.primary,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                ToastService.showInfo('Switched to Landlord Admin View');
               },
             ),
         ],
@@ -283,12 +273,24 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color:
                           isDark ? Colors.grey.shade800 : Colors.grey.shade200,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                        blurRadius: 10,
+                        offset: const Offset(5, 5),
+                      ),
+                      BoxShadow(
+                        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                        blurRadius: 10,
+                        offset: const Offset(-5, -5),
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
@@ -340,13 +342,20 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
                   borderRadius: BorderRadius.circular(24),
-                  boxShadow: null,
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                      blurRadius: 10,
+                      offset: const Offset(5, 5),
+                    ),
+                    BoxShadow(
+                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                      blurRadius: 10,
+                      offset: const Offset(-5, -5),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,7 +369,7 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                             Text(
                               activeTenant.name,
                               style: GoogleFonts.poppins(
-                                color: Colors.white,
+                                color: isDark ? Colors.white : Colors.black87,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 20,
                               ),
@@ -368,7 +377,7 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                             Text(
                               '${activeTenant.unitNumber} • ${tenantUnit.floor}',
                               style: GoogleFonts.poppins(
-                                color: const Color(0xFF94A3B8),
+                                color: isDark ? const Color(0xFF94A3B8) : Colors.black54,
                                 fontSize: 13,
                               ),
                             ),
@@ -422,12 +431,23 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
                   ),
-                  boxShadow: null,
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                      blurRadius: 10,
+                      offset: const Offset(5, 5),
+                    ),
+                    BoxShadow(
+                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                      blurRadius: 10,
+                      offset: const Offset(-5, -5),
+                    ),
+                  ],
                 ),
                 child: Column(
                   children: [
@@ -469,13 +489,30 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                     const SizedBox(height: 18),
 
                     // Pay / Upload Receipt CTA Button
-                    SizedBox(
+                    Container(
                       width: double.infinity,
                       height: 48,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                            blurRadius: 10,
+                            offset: const Offset(5, 5),
+                          ),
+                          BoxShadow(
+                            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                            blurRadius: 10,
+                            offset: const Offset(-5, -5),
+                          ),
+                        ],
+                      ),
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
-                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.transparent,
+                          foregroundColor: const Color(0xFF10B981),
+                          shadowColor: Colors.transparent,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14)),
                           elevation: 0,
@@ -516,12 +553,24 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color:
-                              isDark ? const Color(0xFF1E293B) : Colors.white,
+                              isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                               color: isDark
                                   ? Colors.grey.shade800
                                   : Colors.grey.shade200),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                              blurRadius: 10,
+                              offset: const Offset(5, 5),
+                            ),
+                            BoxShadow(
+                              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                              blurRadius: 10,
+                              offset: const Offset(-5, -5),
+                            ),
+                          ],
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -564,12 +613,24 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color:
-                              isDark ? const Color(0xFF1E293B) : Colors.white,
+                              isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                               color: isDark
                                   ? Colors.grey.shade800
                                   : Colors.grey.shade200),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                              blurRadius: 10,
+                              offset: const Offset(5, 5),
+                            ),
+                            BoxShadow(
+                              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                              blurRadius: 10,
+                              offset: const Offset(-5, -5),
+                            ),
+                          ],
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -633,8 +694,20 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
                     borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                        blurRadius: 10,
+                        offset: const Offset(5, 5),
+                      ),
+                      BoxShadow(
+                        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                        blurRadius: 10,
+                        offset: const Offset(-5, -5),
+                      ),
+                    ],
                   ),
                   child: Text(
                     'No repair tickets active for your unit.',
@@ -672,8 +745,20 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
                     borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                        blurRadius: 10,
+                        offset: const Offset(5, 5),
+                      ),
+                      BoxShadow(
+                        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                        blurRadius: 10,
+                        offset: const Offset(-5, -5),
+                      ),
+                    ],
                   ),
                   child: Text(
                     'No payment records found.',
@@ -699,7 +784,7 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color:
-                              isDark ? const Color(0xFF1E293B) : Colors.white,
+                              isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                             color: isPending
@@ -708,6 +793,18 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                                     ? Colors.grey.shade800
                                     : Colors.grey.shade200),
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                              blurRadius: 10,
+                              offset: const Offset(5, 5),
+                            ),
+                            BoxShadow(
+                              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                              blurRadius: 10,
+                              offset: const Offset(-5, -5),
+                            ),
+                          ],
                         ),
                         child: Row(
                           children: [
@@ -839,9 +936,20 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: null,
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+            blurRadius: 10,
+            offset: const Offset(5, 5),
+          ),
+          BoxShadow(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+            blurRadius: 10,
+            offset: const Offset(-5, -5),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -924,7 +1032,9 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF1E293B)
+          : const Color(0xFFE0E5EC),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -951,13 +1061,32 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                 style: TextStyle(fontSize: 12, color: RampColors.mutedText),
               ),
               const SizedBox(height: 16),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  side: const BorderSide(color: Color(0xFF3B82F6), width: 1.5),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF1E293B)
+                      : const Color(0xFFE0E5EC),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                      blurRadius: 10,
+                      offset: const Offset(5, 5),
+                    ),
+                    BoxShadow(
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                      blurRadius: 10,
+                      offset: const Offset(-5, -5),
+                    ),
+                  ],
                 ),
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: Color(0xFF3B82F6), width: 1.5),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
                 icon: isScanning
                     ? const SizedBox(
                         width: 18,
@@ -1019,28 +1148,17 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                             methodNotifier.value = result.paymentMethod!;
                           }
                           if (modalCtx.mounted) {
-                            ScaffoldMessenger.of(modalCtx).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Receipt scanned! Ref: ${result.referenceNumber ?? "N/A"}'
-                                  '${result.amount != null ? " • Amount: ₱${result.amount!.toStringAsFixed(2)}" : ""}',
-                                ),
-                                backgroundColor: RampColors.success,
-                                behavior: SnackBarBehavior.floating,
-                              ),
+                            ToastService.showSuccess(
+                              'Receipt scanned! Ref: ${result.referenceNumber ?? "N/A"}'
+                              '${result.amount != null ? " • Amount: ₱${result.amount!.toStringAsFixed(2)}" : ""}',
                             );
                           }
                         } else if (result != null && modalCtx.mounted) {
-                          ScaffoldMessenger.of(modalCtx).showSnackBar(
-                            SnackBar(
-                              content: Text(result.errorMessage ??
-                                  'Could not extract details from receipt image.'),
-                              backgroundColor: Colors.redAccent,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
+                          ToastService.showError(result.errorMessage ??
+                              'Could not extract details from receipt image.');
                         }
                       },
+                ),
               ),
               const SizedBox(height: 16),
               ValueListenableBuilder<String>(
@@ -1069,25 +1187,39 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF1E293B)
+                      : const Color(0xFFE0E5EC),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                      blurRadius: 10,
+                      offset: const Offset(5, 5),
+                    ),
+                    BoxShadow(
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                      blurRadius: 10,
+                      offset: const Offset(-5, -5),
+                    ),
+                  ],
                 ),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: const Color(0xFF10B981),
+                    shadowColor: Colors.transparent,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
                 onPressed: () {
                   final refNum = refCtrl.text.trim();
                   final refError = AppValidators.paymentReference(refNum);
                   if (refError != null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(refError),
-                        backgroundColor: RampColors.danger,
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
+                    ToastService.showError(refError);
                     return;
                   }
                   final now = DateTime.now();
@@ -1109,17 +1241,11 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
 
                   ref.read(paymentProvider.notifier).addPayment(payment);
                   Navigator.pop(modalCtx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                          'Payment submitted! Pending landlord verification.'),
-                      backgroundColor: RampColors.success,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
+                  ToastService.showSuccess('Payment submitted! Pending landlord verification.');
                 },
                 child: const Text('Submit Payment Proof',
                     style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
               ),
             ],
           ),
@@ -1136,7 +1262,9 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF1E293B)
+          : const Color(0xFFE0E5EC),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -1184,14 +1312,34 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                 },
               ),
               const SizedBox(height: 20),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: RampColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF1E293B)
+                      : const Color(0xFFE0E5EC),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                      blurRadius: 10,
+                      offset: const Offset(5, 5),
+                    ),
+                    BoxShadow(
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                      blurRadius: 10,
+                      offset: const Offset(-5, -5),
+                    ),
+                  ],
                 ),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: RampColors.primary,
+                    shadowColor: Colors.transparent,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
                 onPressed: () {
                   if (titleCtrl.text.trim().isEmpty) return;
                   final ticket = Ticket(
@@ -1207,16 +1355,11 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
                   );
                   ref.read(ticketProvider.notifier).addTicket(ticket);
                   Navigator.pop(modalCtx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Repair ticket created.'),
-                      backgroundColor: RampColors.success,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
+                  ToastService.showSuccess('Repair ticket created.');
                 },
                 child: const Text('Submit Repair Ticket',
                     style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
               ),
             ],
           ),

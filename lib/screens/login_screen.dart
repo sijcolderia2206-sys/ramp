@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/providers.dart';
 import '../core/widgets/core_widgets.dart';
+import '../core/widgets/clay_container.dart';
 import '../core/theme/ramp_theme.dart';
 import '../core/validation/app_validators.dart';
 import '../core/services/user_database_service.dart';
+import '../core/utils/toast_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -42,27 +44,87 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void _showTermsDialog() {
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Terms & Conditions'),
-        content: const SingleChildScrollView(
-          child: Text(
-            'Welcome to RAMP (Rental Administration Management Platform).\n\n'
-            'By accessing or using this application, you agree to comply with and be bound by the following Terms and Conditions:\n\n'
-            '1. Account & Security: You are responsible for maintaining the confidentiality of your login credentials.\n'
-            '2. Authorized Use: System features, tenant records, financial logs, and utility data are strictly restricted to authorized property representatives and tenant account holders.\n'
-            '3. Data Privacy: All personal identifiable information (PII) is encrypted and processed in accordance with national data privacy standards.\n'
-            '4. Financial Transactions: Payment submissions and receipts generated via RAMP are subject to property verification and SLA compliance.\n\n'
-            'If you have questions regarding these terms, please contact support@ramp-properties.com.',
-            style: TextStyle(fontSize: 13, height: 1.5),
+      builder: (dialogContext) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                  blurRadius: 10,
+                  offset: const Offset(5, 5),
+                ),
+                BoxShadow(
+                  color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                  blurRadius: 10,
+                  offset: const Offset(-5, -5),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Terms & Conditions',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 16),
+                const Flexible(
+                  child: SingleChildScrollView(
+                    child: Text(
+                      'Welcome to RAMP (Rental Administration Management Platform).\n\n'
+                      'By accessing or using this application, you agree to comply with and be bound by the following Terms and Conditions:\n\n'
+                      '1. Account & Security: You are responsible for maintaining the confidentiality of your login credentials.\n'
+                      '2. Authorized Use: System features, tenant records, financial logs, and utility data are strictly restricted to authorized property representatives and tenant account holders.\n'
+                      '3. Data Privacy: All personal identifiable information (PII) is encrypted and processed in accordance with national data privacy standards.\n'
+                      '4. Financial Transactions: Payment submissions and receipts generated via RAMP are subject to property verification and SLA compliance.\n\n'
+                      'If you have questions regarding these terms, please contact support@ramp-properties.com.',
+                      style: TextStyle(fontSize: 13, height: 1.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                          blurRadius: 10,
+                          offset: const Offset(5, 5),
+                        ),
+                        BoxShadow(
+                          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                          blurRadius: 10,
+                          offset: const Offset(-5, -5),
+                        ),
+                      ],
+                    ),
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                      ),
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text('I Understand'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('I Understand'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -75,55 +137,111 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       final email = await showDialog<String>(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Reset password'),
-          content: Form(
-            key: formKey,
-            child: TextFormField(
-              controller: controller,
-              keyboardType: TextInputType.emailAddress,
-              autofocus: true,
-              textInputAction: TextInputAction.done,
-              validator: (value) {
-                final email = value?.trim() ?? '';
-                if (email.isEmpty) return 'Enter your email address.';
-                if (!_isValidEmail(email)) {
-                  return 'Enter a valid email address.';
-                }
-                return null;
-              },
-              decoration: const InputDecoration(
-                labelText: 'Email address',
-                hintText: 'you@example.com',
+        builder: (dialogContext) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                    blurRadius: 10,
+                    offset: const Offset(5, 5),
+                  ),
+                  BoxShadow(
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                    blurRadius: 10,
+                    offset: const Offset(-5, -5),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Reset password',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  Form(
+                    key: formKey,
+                    child: TextFormField(
+                      controller: controller,
+                      keyboardType: TextInputType.emailAddress,
+                      autofocus: true,
+                      textInputAction: TextInputAction.done,
+                      validator: (value) {
+                        final email = value?.trim() ?? '';
+                        if (email.isEmpty) return 'Enter your email address.';
+                        if (!_isValidEmail(email)) {
+                          return 'Enter a valid email address.';
+                        }
+                        return null;
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Email address',
+                        hintText: 'you@example.com',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                              blurRadius: 10,
+                              offset: const Offset(5, 5),
+                            ),
+                            BoxShadow(
+                              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                              blurRadius: 10,
+                              offset: const Offset(-5, -5),
+                            ),
+                          ],
+                        ),
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                          ),
+                          onPressed: () {
+                            if (formKey.currentState?.validate() ?? false) {
+                              Navigator.pop(dialogContext, controller.text);
+                            }
+                          },
+                          child: const Text('Send Reset Email'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (formKey.currentState?.validate() ?? false) {
-                  Navigator.pop(dialogContext, controller.text);
-                }
-              },
-              child: const Text('Send Reset Email'),
-            ),
-          ],
-        ),
+          );
+        },
       );
       controller.dispose();
       if (email == null || !mounted) return;
       final normalizedEmail = email.trim().toLowerCase();
       if (!_isValidEmail(normalizedEmail)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Enter a valid email address.'),
-            backgroundColor: RampColors.danger,
-          ),
-        );
+        ToastService.showError('Enter a valid email address.');
         return;
       }
 
@@ -131,13 +249,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           .sendPasswordResetEmail(email: normalizedEmail);
       _startResetCooldown();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password reset email sent. Check your inbox.'),
-          backgroundColor: RampColors.success,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ToastService.showSuccess('Password reset email sent. Check your inbox.');
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
       final message = switch (error.code) {
@@ -149,18 +261,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           'Password reset is not enabled for this account.',
         _ => 'Unable to send the reset email. Please try again.',
       };
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: RampColors.danger),
-      );
+      ToastService.showError(message);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Something went wrong. Please try again later.'),
-          backgroundColor: RampColors.danger,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ToastService.showError('Something went wrong. Please try again later.');
     }
   }
 
@@ -183,37 +287,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!(_loginFormKey.currentState?.validate() ?? false)) return;
 
     if (!_acceptedTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please accept the Terms & Conditions to sign in.'),
-          backgroundColor: RampColors.danger,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ToastService.showError('Please accept the Terms & Conditions to sign in.');
       return;
     }
 
     final emailErr = AppValidators.email(email);
     if (emailErr != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(emailErr),
-          backgroundColor: RampColors.danger,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ToastService.showError(emailErr);
       return;
     }
 
     final passErr = AppValidators.password(password);
     if (passErr != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(passErr),
-          backgroundColor: RampColors.danger,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ToastService.showError(passErr);
       return;
     }
 
@@ -300,14 +386,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Logged in successfully as ${rampUser.role.displayName}.'),
-          backgroundColor: RampColors.primary,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ToastService.showSuccess('Logged in successfully as ${rampUser.role.displayName}.');
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
       final message = switch (error.code) {
@@ -320,22 +399,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         'too-many-requests' => 'Too many attempts. Try again later.',
         _ => 'Unable to sign in. Please try again.',
       };
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: RampColors.danger,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ToastService.showError(message);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Authentication error: ${e.toString()}'),
-          backgroundColor: RampColors.danger,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ToastService.showError('Authentication error: ${e.toString()}');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -360,12 +427,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return Scaffold(
       backgroundColor: isDark
-          ? Theme.of(context).scaffoldBackgroundColor
-          : RampColors.background,
+          ? const Color(0xFF1E293B)
+          : const Color(0xFFE0E5EC),
       body: SafeArea(
         child: Center(
           child: Container(
             width: contentWidth,
+            margin: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                  blurRadius: 10,
+                  offset: const Offset(5, 5),
+                ),
+                BoxShadow(
+                  color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                  blurRadius: 10,
+                  offset: const Offset(-5, -5),
+                ),
+              ],
+            ),
             alignment: Alignment.center,
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -524,13 +608,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const SizedBox(height: 20),
 
                       // Single Sign In CTA
-                      BouncePillButton(
-                        text: 'SIGN IN TO RAMP',
-                        icon: Icons.login_rounded,
-                        buttonState: _isLoading
-                            ? BounceButtonState.loading
-                            : BounceButtonState.idle,
-                        onPressed: () => _handleLogin(),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                              blurRadius: 10,
+                              offset: const Offset(5, 5),
+                            ),
+                            BoxShadow(
+                              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                              blurRadius: 10,
+                              offset: const Offset(-5, -5),
+                            ),
+                          ],
+                        ),
+                        child: BouncePillButton(
+                          text: 'SIGN IN TO RAMP',
+                          icon: Icons.login_rounded,
+                          buttonState: _isLoading
+                              ? BounceButtonState.loading
+                              : BounceButtonState.idle,
+                          onPressed: () => _handleLogin(),
+                        ),
                       ),
                       const SizedBox(height: 14),
                       TextButton(
@@ -568,66 +670,106 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 10),
-                                side: BorderSide(
-                                    color: RampColors.primary
-                                        .withValues(alpha: 0.5)),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                                    blurRadius: 10,
+                                    offset: const Offset(5, 5),
+                                  ),
+                                  BoxShadow(
+                                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                                    blurRadius: 10,
+                                    offset: const Offset(-5, -5),
+                                  ),
+                                ],
                               ),
-                              icon: const Icon(
-                                  Icons.admin_panel_settings_rounded,
-                                  size: 16,
-                                  color: RampColors.primary),
-                              label: const FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text('Landlord Demo',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: RampColors.primary)),
+                              child: OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 10),
+                                  side: BorderSide(
+                                      color: RampColors.primary
+                                          .withValues(alpha: 0.5)),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                ),
+                                icon: const Icon(
+                                    Icons.admin_panel_settings_rounded,
+                                    size: 16,
+                                    color: RampColors.primary),
+                                label: const FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text('Landlord Demo',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: RampColors.primary)),
+                                ),
+                                onPressed: () {
+                                  setState(() => _acceptedTerms = true);
+                                  _handleLogin(
+                                    overrideUsername: 'landlord@ramp.local',
+                                    overridePassword: 'Password123!',
+                                  );
+                                },
                               ),
-                              onPressed: () {
-                                setState(() => _acceptedTerms = true);
-                                _handleLogin(
-                                  overrideUsername: 'landlord@ramp.local',
-                                  overridePassword: 'Password123!',
-                                );
-                              },
                             ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 10),
-                                side: BorderSide(
-                                    color: const Color(0xFF10B981)
-                                        .withValues(alpha: 0.5)),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                                    blurRadius: 10,
+                                    offset: const Offset(5, 5),
+                                  ),
+                                  BoxShadow(
+                                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                                    blurRadius: 10,
+                                    offset: const Offset(-5, -5),
+                                  ),
+                                ],
                               ),
-                              icon: const Icon(Icons.person_pin_rounded,
-                                  size: 16, color: Color(0xFF10B981)),
-                              label: const FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text('Tenant Demo',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF10B981))),
+                              child: OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 10),
+                                  side: BorderSide(
+                                      color: const Color(0xFF10B981)
+                                          .withValues(alpha: 0.5)),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                ),
+                                icon: const Icon(Icons.person_pin_rounded,
+                                    size: 16, color: Color(0xFF10B981)),
+                                label: const FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text('Tenant Demo',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF10B981))),
+                                ),
+                                onPressed: () {
+                                  setState(() => _acceptedTerms = true);
+                                  _handleLogin(
+                                    overrideUsername: 'maria.santos@gmail.com',
+                                    overridePassword: 'Password123!',
+                                  );
+                                },
                               ),
-                              onPressed: () {
-                                setState(() => _acceptedTerms = true);
-                                _handleLogin(
-                                  overrideUsername: 'maria.santos@gmail.com',
-                                  overridePassword: 'Password123!',
-                                );
-                              },
                             ),
                           ),
                         ],

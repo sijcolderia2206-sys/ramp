@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/state/ramp_state.dart';
 import '../../../core/services/persistence_queue.dart';
+import '../../../core/utils/toast_service.dart';
 
 class AddEditEventSheet extends ConsumerStatefulWidget {
   const AddEditEventSheet({
@@ -139,13 +140,9 @@ class _AddEditEventSheetState extends ConsumerState<AddEditEventSheet> {
 
     Navigator.pop(context);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(isEdit
-            ? 'Event updated successfully.'
-            : 'Event scheduled successfully.'),
-      ),
-    );
+    ToastService.showSuccess(isEdit
+        ? 'Event updated successfully.'
+        : 'Event scheduled successfully.');
   }
 
   @override

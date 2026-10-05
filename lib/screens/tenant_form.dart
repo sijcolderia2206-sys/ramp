@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../core/services/user_database_service.dart';
 import '../core/theme/ramp_theme.dart';
+import '../core/utils/toast_service.dart';
 import '../core/validation/app_validators.dart';
 import '../providers/providers.dart';
 
@@ -194,41 +195,38 @@ class _TenantFormScreenState extends ConsumerState<TenantFormScreen> {
 
     final displayEmail =
         tenant.email.isNotEmpty ? tenant.email : 'tenant_${tenant.id}@ramp.local';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isEditing
-              ? 'Tenant profile updated.'
-              : 'Tenant added! Account initialized ($displayEmail) with default password: tenant123',
-        ),
-        backgroundColor: RampColors.success,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
-      ),
+    ToastService.showSuccess(
+      _isEditing
+          ? 'Tenant profile updated.'
+          : 'Tenant added! Account initialized ($displayEmail) with default password: tenant123',
     );
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: RampColors.danger,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    ToastService.showError(message);
   }
 
   Widget _section(String title, IconData icon, List<Widget> children) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: bgColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+            blurRadius: 10,
+            offset: const Offset(5, 5),
+          ),
+          BoxShadow(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+            blurRadius: 10,
+            offset: const Offset(-5, -5),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -253,29 +251,82 @@ class _TenantFormScreenState extends ConsumerState<TenantFormScreen> {
       {TextInputType? keyboardType,
       int maxLines = 1,
       String? Function(String?)? validator}) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      maxLines: maxLines,
-      validator: validator,
-      autovalidateMode: AutovalidateMode.onUserInteraction,
-      inputFormatters: keyboardType == TextInputType.phone
-          ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9+() -]'))]
-          : null,
-      decoration: InputDecoration(labelText: label),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.4),
+            blurRadius: 4,
+            offset: const Offset(2, 2),
+          ),
+          BoxShadow(
+            color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.white.withValues(alpha: 0.8),
+            blurRadius: 4,
+            offset: const Offset(-2, -2),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+        validator: validator,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        inputFormatters: keyboardType == TextInputType.phone
+            ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9+() -]'))]
+            : null,
+        decoration: InputDecoration(
+          labelText: label,
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: RampColors.primary, width: 2),
+          ),
+        ),
+      ),
     );
   }
 
   Widget _dateField(String label, DateTime date, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          suffixIcon: const Icon(Icons.calendar_today_outlined),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.4),
+            blurRadius: 4,
+            offset: const Offset(2, 2),
+          ),
+          BoxShadow(
+            color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.white.withValues(alpha: 0.8),
+            blurRadius: 4,
+            offset: const Offset(-2, -2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: label,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            suffixIcon: const Icon(Icons.calendar_today_outlined),
+          ),
+          child: Text(DateFormat('MMM d, yyyy').format(date)),
         ),
-        child: Text(DateFormat('MMM d, yyyy').format(date)),
       ),
     );
   }
@@ -284,15 +335,15 @@ class _TenantFormScreenState extends ConsumerState<TenantFormScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC);
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(
-          color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1)),
+      borderSide: BorderSide(color: Colors.transparent),
     );
     final formTheme = theme.copyWith(
       inputDecorationTheme: theme.inputDecorationTheme.copyWith(
         filled: true,
-        fillColor: isDark ? const Color(0xFF172033) : const Color(0xFFF8FAFC),
+        fillColor: bgColor,
         border: border,
         enabledBorder: border,
         focusedBorder: border.copyWith(
@@ -318,7 +369,9 @@ class _TenantFormScreenState extends ConsumerState<TenantFormScreen> {
         }
       },
       child: Scaffold(
+        backgroundColor: bgColor,
         appBar: AppBar(
+          backgroundColor: bgColor,
           title: Text(
               _isEditing ? 'Edit Tenant Profile' : 'Register New Tenant',
               style: GoogleFonts.poppins(

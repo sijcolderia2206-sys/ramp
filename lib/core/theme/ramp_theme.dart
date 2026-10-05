@@ -7,8 +7,8 @@ import '../widgets/clay_container.dart';
 
 /// Palette & Design Tokens for RAMP (Rental Administration Management Platform)
 class RampColors {
-  /// Soft neutral background canvas (#F8F9FA)
-  static const Color background = Color(0xFFF8F9FA);
+  /// Neumorphic base light background canvas (#E0E5EC)
+  static const Color background = Color(0xFFE0E5EC);
 
   /// Electric Blue Primary (#0D6EFD)
   static const Color primary = Color(0xFF0D6EFD);
@@ -41,14 +41,14 @@ class RampColors {
   static const Color warning = Color(0xFFFFC107);
   static const Color warningTint = Color(0xFFFFF3E0);
 
-  /// White Surface
-  static const Color surface = Color(0xFFFFFFFF);
+  /// Neumorphic Surface
+  static const Color surface = Color(0xFFE0E5EC);
 
   /// Subtle Border
   static const Color border = Color(0xFFE2E8F0);
   
   /// Dark Mode Colors
-  static const Color darkBackground = Color(0xFF0F172A);
+  static const Color darkBackground = Color(0xFF1E293B);
   static const Color darkSurface = Color(0xFF1E293B);
   static const Color darkBorder = Color(0xFF334155);
 
@@ -198,8 +198,8 @@ class RampTheme {
   }
 
   static ThemeData get darkTheme {
-    const background = Color(0xFF101112);
-    const surface = Color(0xFF181A1C);
+    const background = Color(0xFF1E293B);
+    const surface = Color(0xFF1E293B);
     const elevated = Color(0xFF222527);
     const text = Color(0xFFF5F5F5);
     const muted = Color(0xFFADB5BD);
@@ -400,14 +400,14 @@ class RampCard extends StatelessWidget {
   }
 
   Color _darkSurfaceColor(Color color) {
-    if (color == RampColors.surface) return const Color(0xFF181A1C);
+    if (color == RampColors.surface || color == const Color(0xFFFFFFFF)) return const Color(0xFF1E293B);
     if (color == RampColors.softBlueTint) return const Color(0xFF202B3D);
     if (color == RampColors.successTint) return const Color(0xFF1E3028);
     if (color == RampColors.warningTint || color == RampColors.peachPillTint) {
       return const Color(0xFF342B1D);
     }
     if (color == RampColors.dangerTint) return const Color(0xFF351F22);
-    if (color == RampColors.background) return const Color(0xFF101112);
+    if (color == RampColors.background) return const Color(0xFF1E293B);
     return color;
   }
 }

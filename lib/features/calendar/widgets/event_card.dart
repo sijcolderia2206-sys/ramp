@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/ramp_theme.dart';
 import '../../../core/state/ramp_state.dart';
+import '../../../core/utils/toast_service.dart';
 import '../../../core/navigation/custom_page_transitions.dart';
 import '../../../screens/payment_form.dart';
 import '../../../screens/tenant_profile.dart';
@@ -303,11 +304,7 @@ class RampCalendarEventCard extends ConsumerWidget {
                                 final text =
                                     'Reminder: ${event.title} scheduled for ${DateFormat('MMMM d, yyyy').format(event.date)}. ${event.description ?? ''}';
                                 Clipboard.setData(ClipboardData(text: text));
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          'Reminder copied to clipboard.')),
-                                );
+                                ToastService.showInfo('Reminder copied to clipboard.');
                               },
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -366,13 +363,9 @@ class RampCalendarEventCard extends ConsumerWidget {
                                   ref
                                       .read(eventProvider.notifier)
                                       .toggleEventCompleted(event.id);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(isCompleted
-                                          ? 'Event marked incomplete'
-                                          : 'Event marked completed!'),
-                                    ),
-                                  );
+                                  ToastService.showSuccess(isCompleted
+                                      ? 'Event marked incomplete'
+                                      : 'Event marked completed!');
                                 },
                                 color: isCompleted
                                     ? theme.colorScheme.onSurfaceVariant
@@ -436,11 +429,7 @@ class RampCalendarEventCard extends ConsumerWidget {
                                         .read(eventProvider.notifier)
                                         .deleteEvent(event.id);
                                     if (context.mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                            content: Text('Event deleted.')),
-                                      );
+                                      ToastService.showInfo('Event deleted.');
                                     }
                                   }
                                 },

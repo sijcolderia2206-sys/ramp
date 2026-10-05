@@ -6,8 +6,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../core/theme/ramp_theme.dart';
+import '../core/utils/toast_service.dart';
 import '../core/validation/app_validators.dart';
 import '../core/widgets/bouncing_interactive.dart';
+import '../core/widgets/clay_container.dart';
 import '../core/widgets/ramp_text_field.dart';
 import '../providers/providers.dart';
 
@@ -124,13 +126,7 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                'Image selection error: ${e.toString().split("\n").first}'),
-            backgroundColor: RampColors.primary,
-          ),
-        );
+        ToastService.showError('Image selection error: ${e.toString().split("\n").first}');
       }
     }
   }
@@ -155,11 +151,20 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+            blurRadius: 10,
+            offset: const Offset(5, 5),
+          ),
+          BoxShadow(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+            blurRadius: 10,
+            offset: const Offset(-5, -5),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,15 +200,13 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
 
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(
-        color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
-      ),
+      borderSide: BorderSide.none,
     );
 
     final formTheme = theme.copyWith(
       inputDecorationTheme: theme.inputDecorationTheme.copyWith(
         filled: true,
-        fillColor: isDark ? const Color(0xFF172033) : const Color(0xFFF8FAFC),
+        fillColor: Colors.transparent,
         border: border,
         enabledBorder: border,
         focusedBorder: border.copyWith(
@@ -243,6 +246,7 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
         }
       },
       child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
         appBar: AppBar(
           title: Text(
             isEditing ? 'Edit Maintenance Issue' : 'Log Maintenance Issue',
@@ -270,11 +274,20 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: RampColors.primary.withValues(alpha: 0.1),
+                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: RampColors.primary.withValues(alpha: 0.3),
-                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                                blurRadius: 10,
+                                offset: const Offset(5, 5),
+                              ),
+                              BoxShadow(
+                                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                                blurRadius: 10,
+                                offset: const Offset(-5, -5),
+                              ),
+                            ],
                           ),
                           child: Row(
                             children: [
@@ -324,69 +337,123 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
                           'Unit & Issue Details',
                           Icons.home_work_outlined,
                           [
-                            DropdownButtonFormField<String>(
-                              isExpanded: true,
-                              initialValue: currentUnitId,
-                              decoration: const InputDecoration(
-                                labelText: 'Assigned Unit',
-                                prefixIcon: Icon(Icons.meeting_room_outlined),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                                    blurRadius: 10,
+                                    offset: const Offset(5, 5),
+                                  ),
+                                  BoxShadow(
+                                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                                    blurRadius: 10,
+                                    offset: const Offset(-5, -5),
+                                  ),
+                                ],
                               ),
-                              items: units
-                                  .map((u) => DropdownMenuItem(
-                                        value: u.id,
-                                        child: Text(
-                                          '${u.name} ${u.tenantName != null && u.tenantName!.isNotEmpty ? "(${u.tenantName})" : "(Vacant)"}',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ))
-                                  .toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  final matched = units.firstWhere(
-                                      (u) => u.id == val,
-                                      orElse: () => currentUnit);
-                                  setState(() {
-                                    _selectedUnitId = matched.id;
-                                    _selectedUnit = matched.name;
-                                    _tenantName =
-                                        matched.tenantName ?? 'Unoccupied';
-                                    _selectedTenantId = matched.tenantId;
-                                    _selectedAreas.clear();
-                                  });
-                                }
-                              },
+                              child: DropdownButtonFormField<String>(
+                                isExpanded: true,
+                                initialValue: currentUnitId,
+                                decoration: const InputDecoration(
+                                  labelText: 'Assigned Unit',
+                                  prefixIcon: Icon(Icons.meeting_room_outlined),
+                                ),
+                                items: units
+                                    .map((u) => DropdownMenuItem(
+                                          value: u.id,
+                                          child: Text(
+                                            '${u.name} ${u.tenantName != null && u.tenantName!.isNotEmpty ? "(${u.tenantName})" : "(Vacant)"}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ))
+                                    .toList(),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    final matched = units.firstWhere(
+                                        (u) => u.id == val,
+                                        orElse: () => currentUnit);
+                                    setState(() {
+                                      _selectedUnitId = matched.id;
+                                      _selectedUnit = matched.name;
+                                      _tenantName =
+                                          matched.tenantName ?? 'Unoccupied';
+                                      _selectedTenantId = matched.tenantId;
+                                      _selectedAreas.clear();
+                                    });
+                                  }
+                                },
+                              ),
                             ),
                             const SizedBox(height: 12),
-                            RampTextField(
-                              controller: _titleCtrl,
-                              label: 'Issue Name / Title',
-                              hintText: 'e.g. Bathroom Faucet Dripping',
-                              validator: (val) => AppValidators.requiredText(
-                                  val,
-                                  label: 'issue title'),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                                    blurRadius: 10,
+                                    offset: const Offset(5, 5),
+                                  ),
+                                  BoxShadow(
+                                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                                    blurRadius: 10,
+                                    offset: const Offset(-5, -5),
+                                  ),
+                                ],
+                              ),
+                              child: RampTextField(
+                                controller: _titleCtrl,
+                                label: 'Issue Name / Title',
+                                hintText: 'e.g. Bathroom Faucet Dripping',
+                                validator: (val) => AppValidators.requiredText(
+                                    val,
+                                    label: 'issue title'),
+                              ),
                             ),
                             const SizedBox(height: 12),
-                            DropdownButtonFormField<String>(
-                              isExpanded: true,
-                              initialValue: _categories.contains(_selectedCategory)
-                                  ? _selectedCategory
-                                  : 'General',
-                              decoration: const InputDecoration(
-                                labelText: 'Category',
-                                prefixIcon: Icon(Icons.category_outlined),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                                    blurRadius: 10,
+                                    offset: const Offset(5, 5),
+                                  ),
+                                  BoxShadow(
+                                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                                    blurRadius: 10,
+                                    offset: const Offset(-5, -5),
+                                  ),
+                                ],
                               ),
-                              items: _categories
-                                  .map((cat) => DropdownMenuItem(
-                                        value: cat,
-                                        child: Text(cat),
-                                      ))
-                                  .toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() => _selectedCategory = val);
-                                }
-                              },
+                              child: DropdownButtonFormField<String>(
+                                isExpanded: true,
+                                initialValue: _categories.contains(_selectedCategory)
+                                    ? _selectedCategory
+                                    : 'General',
+                                decoration: const InputDecoration(
+                                  labelText: 'Category',
+                                  prefixIcon: Icon(Icons.category_outlined),
+                                ),
+                                items: _categories
+                                    .map((cat) => DropdownMenuItem(
+                                          value: cat,
+                                          child: Text(cat),
+                                        ))
+                                    .toList(),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setState(() => _selectedCategory = val);
+                                  }
+                                },
+                              ),
                             ),
                             const SizedBox(height: 14),
                             Text(
@@ -495,23 +562,44 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
                             InkWell(
                               onTap: _selectStartDate,
                               borderRadius: BorderRadius.circular(12),
-                              child: InputDecorator(
-                                decoration: const InputDecoration(
-                                  labelText: 'When did the issue start?',
-                                  suffixIcon:
-                                      Icon(Icons.calendar_today_outlined),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                                      blurRadius: 10,
+                                      offset: const Offset(5, 5),
+                                    ),
+                                    BoxShadow(
+                                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                                      blurRadius: 10,
+                                      offset: const Offset(-5, -5),
+                                    ),
+                                  ],
                                 ),
-                                child: Text(
-                                  _issueStartedAt != null
-                                      ? DateFormat('MMMM dd, yyyy')
-                                          .format(_issueStartedAt!)
-                                      : 'Select start date (Optional)',
-                                  style: TextStyle(
-                                    color: _issueStartedAt != null
-                                        ? (isDark
-                                            ? Colors.white
-                                            : RampColors.slate)
-                                        : Colors.grey,
+                                child: InputDecorator(
+                                  decoration: const InputDecoration(
+                                    labelText: 'When did the issue start?',
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    suffixIcon:
+                                        Icon(Icons.calendar_today_outlined),
+                                  ),
+                                  child: Text(
+                                    _issueStartedAt != null
+                                        ? DateFormat('MMMM dd, yyyy')
+                                            .format(_issueStartedAt!)
+                                        : 'Select start date (Optional)',
+                                    style: TextStyle(
+                                      color: _issueStartedAt != null
+                                          ? (isDark
+                                              ? Colors.white
+                                              : RampColors.slate)
+                                          : Colors.grey,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -525,12 +613,30 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
                           'Description & Photo Evidence',
                           Icons.notes_rounded,
                           [
-                            RampTextField(
-                              controller: _descCtrl,
-                              label: 'Description',
-                              hintText:
-                                  'Provide details about what needs attention...',
-                              maxLines: 3,
+                            Container(
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                                    blurRadius: 10,
+                                    offset: const Offset(5, 5),
+                                  ),
+                                  BoxShadow(
+                                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                                    blurRadius: 10,
+                                    offset: const Offset(-5, -5),
+                                  ),
+                                ],
+                              ),
+                              child: RampTextField(
+                                controller: _descCtrl,
+                                label: 'Description',
+                                hintText:
+                                    'Provide details about what needs attention...',
+                                maxLines: 3,
+                              ),
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -549,15 +655,20 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
                                 height: 120,
                                 width: double.infinity,
                                 decoration: BoxDecoration(
-                                  color: isDark
-                                      ? const Color(0xFF172033)
-                                      : const Color(0xFFF8FAFC),
-                                  border: Border.all(
-                                    color: isDark
-                                        ? const Color(0xFF475569)
-                                        : const Color(0xFFCBD5E1),
-                                  ),
+                                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
                                   borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                                      blurRadius: 10,
+                                      offset: const Offset(5, 5),
+                                    ),
+                                    BoxShadow(
+                                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                                      blurRadius: 10,
+                                      offset: const Offset(-5, -5),
+                                    ),
+                                  ],
                                 ),
                                 child: _photoFile != null
                                     ? ClipRRect(
@@ -593,17 +704,35 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
                         const SizedBox(height: 28),
 
                         // Submit Button
-                        BouncePillButton(
-                          text: _isSaving
-                              ? 'SAVING...'
-                              : (isEditing
-                                  ? 'UPDATE TICKET'
-                                  : 'CREATE MAINTENANCE TICKET'),
-                          icon: Icons.check_circle_rounded,
-                          backgroundColor: RampColors.primary,
-                          onPressed: _isSaving
-                              ? null
-                              : () async {
+                        Container(
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                                blurRadius: 10,
+                                offset: const Offset(5, 5),
+                              ),
+                              BoxShadow(
+                                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                                blurRadius: 10,
+                                offset: const Offset(-5, -5),
+                              ),
+                            ],
+                          ),
+                          child: BouncePillButton(
+                            text: _isSaving
+                                ? 'SAVING...'
+                                : (isEditing
+                                    ? 'UPDATE TICKET'
+                                    : 'CREATE MAINTENANCE TICKET'),
+                            icon: Icons.check_circle_rounded,
+                            backgroundColor: Colors.transparent,
+                            textColor: isDark ? Colors.white : RampColors.primary,
+                            onPressed: _isSaving
+                                ? null
+                                : () async {
                                   if (!(_formKey.currentState?.validate() ??
                                       false)) {
                                     return;
@@ -657,18 +786,13 @@ class _TicketFormScreenState extends ConsumerState<TicketFormScreen> {
 
                                   if (mounted) {
                                     Navigator.pop(context, true);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        backgroundColor: RampColors.success,
-                                        behavior: SnackBarBehavior.floating,
-                                        content: Text(isEditing
-                                            ? 'Maintenance ticket updated!'
-                                            : 'Maintenance ticket for $_selectedUnit created!'),
-                                      ),
-                                    );
+                                    ToastService.showSuccess(isEditing
+                                        ? 'Maintenance ticket updated!'
+                                        : 'Maintenance ticket for $_selectedUnit created!');
                                   }
                                 },
                         ),
+                      ),
                       ],
                     ),
                   ),

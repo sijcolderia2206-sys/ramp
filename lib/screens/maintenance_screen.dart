@@ -6,9 +6,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../providers/providers.dart';
 import '../core/widgets/core_widgets.dart';
+import '../core/widgets/clay_container.dart';
 import '../core/navigation/custom_page_transitions.dart';
 import '../core/theme/ramp_theme.dart';
 import '../core/services/reminder_launcher_service.dart';
+import '../core/utils/toast_service.dart';
 import 'ticket_form.dart';
 
 class MaintenanceScreen extends ConsumerStatefulWidget {
@@ -232,13 +234,8 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                                       phone: tenantMatch?.phone ?? '',
                                       message: reminderText);
                                   if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      backgroundColor: RampColors.primary,
-                                      content: Text(
-                                          'Visit reminder template ready & dispatched!'),
-                                    ),
-                                  );
+                                  ToastService.showInfo(
+                                      'Visit reminder template ready & dispatched!');
                                 },
                               ),
                             ),
@@ -262,13 +259,8 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                                     .scheduleTicketVisit(
                                         ticket.id, selectedDate, formattedSlot);
                                 Navigator.pop(sheetContext);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: RampColors.success,
-                                    content: Text(
-                                        'Inspection visit scheduled for ${ticket.unitNumber}!'),
-                                  ),
-                                );
+                                ToastService.showSuccess(
+                                    'Inspection visit scheduled for ${ticket.unitNumber}!');
                               },
                             ),
                           ),
@@ -435,24 +427,14 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                             .submitTicketEstimate(
                                 ticket.id, parsedAmount, partsList);
                         if (!saved) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              backgroundColor: RampColors.danger,
-                              content: Text(
-                                  'Enter an estimate above zero and at least one repair or replacement item.'),
-                            ),
-                          );
+                          ToastService.showError(
+                              'Enter an estimate above zero and at least one repair or replacement item.');
                           return;
                         }
                         Navigator.pop(sheetContext);
 
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: RampColors.success,
-                            content: Text(
-                                'Estimate saved! Added ₱${parsedAmount.toStringAsFixed(2)} to ${ticket.unitNumber}\'s ledger.'),
-                          ),
-                        );
+                        ToastService.showSuccess(
+                            'Estimate saved! Added ₱${parsedAmount.toStringAsFixed(2)} to ${ticket.unitNumber}\'s ledger.');
                       },
                     ),
                   ),
@@ -659,13 +641,8 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                                       phone: tenantMatch?.phone ?? '',
                                       message: reminderText);
                                   if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      backgroundColor: RampColors.primary,
-                                      content: Text(
-                                          'Repair reminder template ready & dispatched!'),
-                                    ),
-                                  );
+                                  ToastService.showInfo(
+                                      'Repair reminder template ready & dispatched!');
                                 },
                               ),
                             ),
@@ -693,23 +670,13 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                                       contractorCtrl.text.trim(),
                                     );
                                 if (!saved) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      backgroundColor: RampColors.danger,
-                                      content: Text(
-                                          'Choose a repair time and enter who will perform the repair.'),
-                                    ),
-                                  );
+                                  ToastService.showError(
+                                      'Choose a repair time and enter who will perform the repair.');
                                   return;
                                 }
                                 Navigator.pop(sheetContext);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: RampColors.success,
-                                    content: Text(
-                                        'Repair scheduled for ${ticket.unitNumber}!'),
-                                  ),
-                                );
+                                ToastService.showSuccess(
+                                    'Repair scheduled for ${ticket.unitNumber}!');
                               },
                             ),
                           ),
@@ -868,23 +835,13 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
                                   summary: notesCtrl.text.trim(),
                                 );
                             if (!completed) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  backgroundColor: RampColors.danger,
-                                  content: Text(
-                                      'Add a completion summary before closing the repair.'),
-                                ),
-                              );
+                              ToastService.showError(
+                                  'Add a completion summary before closing the repair.');
                               return;
                             }
                             Navigator.pop(sheetContext);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                backgroundColor: RampColors.success,
-                                content: Text(
-                                    'Ticket for ${ticket.unitNumber} marked fully completed!'),
-                              ),
-                            );
+                            ToastService.showSuccess(
+                                'Ticket for ${ticket.unitNumber} marked fully completed!');
                           },
                         ),
                       ),
@@ -989,12 +946,7 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
             onPressed: () {
               Navigator.pop(dialogContext);
               ref.read(ticketProvider.notifier).deleteTicket(ticket.id);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  backgroundColor: RampColors.danger,
-                  content: Text('Deleted repair ticket for ${ticket.unitNumber}.'),
-                ),
-              );
+              ToastService.showInfo('Deleted repair ticket for ${ticket.unitNumber}.');
             },
             child: const Text('DELETE'),
           ),
@@ -1014,9 +966,20 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: null,
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+            blurRadius: 10,
+            offset: const Offset(5, 5),
+          ),
+          BoxShadow(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+            blurRadius: 10,
+            offset: const Offset(-5, -5),
+          ),
+        ],
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -1810,8 +1773,20 @@ class _AnimatedRepairProgressTimelineSheetState
     return Container(
       height: MediaQuery.of(context).size.height * 0.72,
       decoration: BoxDecoration(
-        color: surfaceBg,
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+            blurRadius: 10,
+            offset: const Offset(5, 5),
+          ),
+          BoxShadow(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+            blurRadius: 10,
+            offset: const Offset(-5, -5),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -1905,10 +1880,21 @@ class _AnimatedRepairProgressTimelineSheetState
                       return Container(
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: cardBg,
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: borderClr, width: 1),
-                          boxShadow: null,
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                              blurRadius: 10,
+                              offset: const Offset(5, 5),
+                            ),
+                            BoxShadow(
+                              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                              blurRadius: 10,
+                              offset: const Offset(-5, -5),
+                            ),
+                          ],
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2197,10 +2183,22 @@ class _AnimatedRepairProgressTimelineSheetState
                                   margin: const EdgeInsets.only(bottom: 16),
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: cardBg,
+                                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
                                     borderRadius: BorderRadius.circular(14),
                                     border:
                                         Border.all(color: borderClr, width: 1),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                                        blurRadius: 10,
+                                        offset: const Offset(5, 5),
+                                      ),
+                                      BoxShadow(
+                                        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                                        blurRadius: 10,
+                                        offset: const Offset(-5, -5),
+                                      ),
+                                    ],
                                   ),
                                   child: Column(
                                     crossAxisAlignment:

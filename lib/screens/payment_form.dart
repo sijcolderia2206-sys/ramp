@@ -6,7 +6,9 @@ import 'package:intl/intl.dart';
 
 import '../core/navigation/custom_page_transitions.dart';
 import '../core/theme/ramp_theme.dart';
+import '../core/utils/toast_service.dart';
 import '../core/widgets/bouncing_interactive.dart';
+import '../core/widgets/clay_container.dart';
 import '../core/widgets/ramp_text_field.dart';
 import '../providers/providers.dart';
 
@@ -162,13 +164,7 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
         (baseRent + water + electric + lateFee);
 
     if (totalPaid <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a valid amount paid.'),
-          backgroundColor: RampColors.danger,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ToastService.showError('Please enter a valid amount paid.');
       return;
     }
 
@@ -228,13 +224,7 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
     if (!mounted) return;
 
     Navigator.pop(context, true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Payment for $month recorded successfully! Ref: $refNum'),
-        backgroundColor: RampColors.success,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    ToastService.showSuccess('Payment for $month recorded successfully! Ref: $refNum');
   }
 
   Widget _section(String title, IconData icon, List<Widget> children) {
@@ -243,11 +233,23 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+            blurRadius: 10,
+            offset: const Offset(5, 5),
+          ),
+          BoxShadow(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+            blurRadius: 10,
+            offset: const Offset(-5, -5),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,7 +292,7 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
     final formTheme = theme.copyWith(
       inputDecorationTheme: theme.inputDecorationTheme.copyWith(
         filled: true,
-        fillColor: isDark ? const Color(0xFF172033) : const Color(0xFFF8FAFC),
+        fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
         border: border,
         enabledBorder: border,
         focusedBorder: border.copyWith(
@@ -311,7 +313,9 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
         }
       },
       child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
         appBar: AppBar(
+          backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
           title: Text(
             'Record Payment',
             style: GoogleFonts.poppins(
@@ -338,11 +342,23 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: RampColors.primary.withValues(alpha: 0.1),
+                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: RampColors.primary.withValues(alpha: 0.3),
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                                blurRadius: 10,
+                                offset: const Offset(5, 5),
+                              ),
+                              BoxShadow(
+                                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                                blurRadius: 10,
+                                offset: const Offset(-5, -5),
+                              ),
+                            ],
                           ),
                           child: Row(
                             children: [
@@ -429,9 +445,7 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
-                                  color: isDark
-                                      ? const Color(0xFF1E293B)
-                                      : RampColors.softBlueTint,
+                                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: isDark
@@ -439,6 +453,18 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
                                         : RampColors.primary
                                             .withValues(alpha: 0.2),
                                   ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                                      blurRadius: 10,
+                                      offset: const Offset(5, 5),
+                                    ),
+                                    BoxShadow(
+                                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                                      blurRadius: 10,
+                                      offset: const Offset(-5, -5),
+                                    ),
+                                  ],
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -579,9 +605,7 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
                                   ),
                                   selected: isSelected,
                                   selectedColor: RampColors.primary,
-                                  backgroundColor: isDark
-                                      ? const Color(0xFF0F172A)
-                                      : RampColors.background,
+                                  backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
                                   onSelected: (selected) {
                                     if (selected) {
                                       setState(() => _selectedMethod = method);
@@ -601,11 +625,28 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
                         const SizedBox(height: 28),
 
                         // Submit Button
-                        BouncePillButton(
-                          text: _isSaving ? 'RECORDING...' : 'RECORD PAYMENT',
-                          icon: Icons.check_circle_rounded,
-                          backgroundColor: RampColors.success,
-                          onPressed: _isSaving ? null : _savePayment,
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                                blurRadius: 10,
+                                offset: const Offset(5, 5),
+                              ),
+                              BoxShadow(
+                                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                                blurRadius: 10,
+                                offset: const Offset(-5, -5),
+                              ),
+                            ],
+                          ),
+                          child: BouncePillButton(
+                            text: _isSaving ? 'RECORDING...' : 'RECORD PAYMENT',
+                            icon: Icons.check_circle_rounded,
+                            backgroundColor: RampColors.success,
+                            onPressed: _isSaving ? null : _savePayment,
+                          ),
                         ),
                       ],
                     ),
@@ -628,10 +669,7 @@ void showRecordPaymentSheet(
 }) {
   final allTenants = ref.read(tenantProvider);
   if (allTenants.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Create a tenant profile before recording a payment.'),
-      behavior: SnackBarBehavior.floating,
-    ));
+    ToastService.showWarning('Create a tenant profile before recording a payment.');
     return;
   }
   Navigator.of(context, rootNavigator: true).push(

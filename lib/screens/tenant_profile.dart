@@ -6,8 +6,10 @@ import 'package:intl/intl.dart';
 import '../providers/providers.dart';
 import '../core/widgets/core_widgets.dart';
 import '../core/theme/ramp_theme.dart';
+import '../core/utils/toast_service.dart';
 import '../core/navigation/custom_page_transitions.dart';
 import '../core/services/reminder_launcher_service.dart';
+import '../core/widgets/clay_container.dart';
 import 'payment_form.dart';
 import 'tenant_form.dart';
 import 'payments_screen.dart';
@@ -72,13 +74,27 @@ class TenantProfileScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      backgroundColor: Colors.transparent,
       builder: (context) {
         return Container(
           height: MediaQuery.of(context).size.height * 0.6,
           padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                blurRadius: 10,
+                offset: const Offset(5, 5),
+              ),
+              BoxShadow(
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                blurRadius: 10,
+                offset: const Offset(-5, -5),
+              ),
+            ],
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -129,8 +145,24 @@ class TenantProfileScreen extends ConsumerWidget {
                           final t = tickets[index];
                           return StaggeredListItem(
                             index: index,
-                            child: RampCard(
+                            child: Container(
                               padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                                    blurRadius: 10,
+                                    offset: const Offset(5, 5),
+                                  ),
+                                  BoxShadow(
+                                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                                    blurRadius: 10,
+                                    offset: const Offset(-5, -5),
+                                  ),
+                                ],
+                              ),
                               child: ListTile(
                                 contentPadding: EdgeInsets.zero,
                                 leading: Container(
@@ -205,7 +237,7 @@ class TenantProfileScreen extends ConsumerWidget {
     final Color statusColor = tenant.statusColor;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121827) : RampColors.background,
+      backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
       appBar: AppBar(
         title: Text(
           '${tenant.name} Profile',
@@ -225,13 +257,7 @@ class TenantProfileScreen extends ConsumerWidget {
                 ),
               );
               if (saved == true && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Tenant profile updated!'),
-                    backgroundColor: RampColors.success,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                ToastService.showSuccess('Tenant profile updated!');
               }
             },
           ),
@@ -245,22 +271,10 @@ class TenantProfileScreen extends ConsumerWidget {
               if (!context.mounted || !confirmed) return;
               if (tenant.isArchived) {
                 ref.read(tenantProvider.notifier).unarchiveTenant(tenant.id);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${tenant.name} restored from archives!'),
-                    backgroundColor: RampColors.primary,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                ToastService.showInfo('${tenant.name} restored from archives!');
               } else {
                 ref.read(tenantProvider.notifier).archiveTenant(tenant.id);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${tenant.name} moved to Archived list!'),
-                    backgroundColor: RampColors.warning,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                ToastService.showWarning('${tenant.name} moved to Archived list!');
               }
             },
           ),
@@ -294,13 +308,7 @@ class TenantProfileScreen extends ConsumerWidget {
               if (!context.mounted || !confirmed) return;
               ref.read(tenantProvider.notifier).deleteTenant(tenant.id);
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${tenant.name} permanently deleted.'),
-                  backgroundColor: RampColors.danger,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+              ToastService.showInfo('${tenant.name} permanently deleted.');
             },
           ),
         ],
@@ -314,8 +322,24 @@ class TenantProfileScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Tenant Card Banner
-              RampCard(
+              Container(
                 padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                      blurRadius: 10,
+                      offset: const Offset(5, 5),
+                    ),
+                    BoxShadow(
+                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                      blurRadius: 10,
+                      offset: const Offset(-5, -5),
+                    ),
+                  ],
+                ),
                 child: Column(
                   children: [
                     Row(
@@ -453,10 +477,20 @@ class TenantProfileScreen extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: tenant.healthColor.withValues(alpha: 0.08),
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                            color: tenant.healthColor.withValues(alpha: 0.2)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                            blurRadius: 10,
+                            offset: const Offset(5, 5),
+                          ),
+                          BoxShadow(
+                            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                            blurRadius: 10,
+                            offset: const Offset(-5, -5),
+                          ),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -552,8 +586,24 @@ class TenantProfileScreen extends ConsumerWidget {
               const SizedBox(height: 20),
 
               if (!tenant.isAssigned) ...[
-                RampCard(
+                Container(
                   padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                        blurRadius: 10,
+                        offset: const Offset(5, 5),
+                      ),
+                      BoxShadow(
+                        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                        blurRadius: 10,
+                        offset: const Offset(-5, -5),
+                      ),
+                    ],
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -603,6 +653,7 @@ class TenantProfileScreen extends ConsumerWidget {
                             icon: Icons.message_rounded,
                             label: 'SMS Reminder',
                             color: RampColors.primary,
+                            isDark: isDark,
                             onTap: () async {
                               ref
                                   .read(tenantProvider.notifier)
@@ -618,14 +669,9 @@ class TenantProfileScreen extends ConsumerWidget {
                                     ClipboardData(text: message));
                               }
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  backgroundColor: RampColors.primary,
-                                  content: Text(launched
-                                      ? 'SMS app opened for ${tenant.phone}! Health updated.'
-                                      : 'Reminder text copied to clipboard! Health updated.'),
-                                ),
-                              );
+                              ToastService.showInfo(launched
+                                  ? 'SMS app opened for ${tenant.phone}! Health updated.'
+                                  : 'Reminder text copied to clipboard! Health updated.');
                             },
                           ),
                         ),
@@ -635,6 +681,7 @@ class TenantProfileScreen extends ConsumerWidget {
                             icon: Icons.forum_rounded,
                             label: 'Messenger Reminder',
                             color: const Color(0xFF0084FF),
+                            isDark: isDark,
                             onTap: () async {
                               ref
                                   .read(tenantProvider.notifier)
@@ -651,14 +698,9 @@ class TenantProfileScreen extends ConsumerWidget {
                                     ClipboardData(text: message));
                               }
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  backgroundColor: const Color(0xFF0084FF),
-                                  content: Text(launched
-                                      ? 'Messenger opened for ${tenant.name}! Reminder text copied to clipboard.'
-                                      : 'Reminder text copied to clipboard! Health updated.'),
-                                ),
-                              );
+                              ToastService.showInfo(launched
+                                  ? 'Messenger opened for ${tenant.name}! Reminder text copied to clipboard.'
+                                  : 'Reminder text copied to clipboard! Health updated.');
                             },
                           ),
                         ),
@@ -672,6 +714,7 @@ class TenantProfileScreen extends ConsumerWidget {
                             icon: Icons.receipt_long_rounded,
                             label: 'Record Payment',
                             color: RampColors.primary,
+                            isDark: isDark,
                             onTap: () => showRecordPaymentSheet(context, ref,
                                 initialTenant: tenant),
                           ),
@@ -682,6 +725,7 @@ class TenantProfileScreen extends ConsumerWidget {
                             icon: Icons.payments_rounded,
                             label: 'View Payments',
                             color: RampColors.primary,
+                            isDark: isDark,
                             onTap: () =>
                                 Navigator.of(context, rootNavigator: true)
                                     .push(MaterialPageRoute(
@@ -700,6 +744,7 @@ class TenantProfileScreen extends ConsumerWidget {
                             icon: Icons.build_rounded,
                             label: 'View Tickets',
                             color: RampColors.warning,
+                            isDark: isDark,
                             onTap: () =>
                                 _showTenantTicketsModal(context, ref, tenant),
                           ),
@@ -710,6 +755,7 @@ class TenantProfileScreen extends ConsumerWidget {
                             icon: Icons.apartment_rounded,
                             label: 'Unit Details',
                             color: const Color(0xFF6366F1),
+                            isDark: isDark,
                             onTap: () {
                               if (tenant.unitId.isNotEmpty) {
                                 Navigator.of(context, rootNavigator: true).push(
@@ -719,11 +765,7 @@ class TenantProfileScreen extends ConsumerWidget {
                                   ),
                                 );
                               } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          'Tenant is not assigned to a unit.')),
-                                );
+                                ToastService.showWarning('Tenant is not assigned to a unit.');
                               }
                             },
                           ),
@@ -743,8 +785,24 @@ class TenantProfileScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                RampCard(
+                Container(
                   padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                        blurRadius: 10,
+                        offset: const Offset(5, 5),
+                      ),
+                      BoxShadow(
+                        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                        blurRadius: 10,
+                        offset: const Offset(-5, -5),
+                      ),
+                    ],
+                  ),
                   child: Column(
                     children: tenant.reminderLogs.reversed.map((log) {
                       final isSms = log.channel.toLowerCase().contains('sms');
@@ -811,15 +869,27 @@ class TenantProfileScreen extends ConsumerWidget {
     required String label,
     required Color color,
     required VoidCallback onTap,
+    required bool isDark,
   }) {
     return BouncingInteractive(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+              blurRadius: 10,
+              offset: const Offset(5, 5),
+            ),
+            BoxShadow(
+              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+              blurRadius: 10,
+              offset: const Offset(-5, -5),
+            ),
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

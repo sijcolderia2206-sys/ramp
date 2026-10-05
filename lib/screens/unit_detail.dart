@@ -7,6 +7,7 @@ import '../core/widgets/location_picker_map.dart';
 import '../providers/providers.dart';
 import '../core/widgets/core_widgets.dart';
 import '../core/theme/ramp_theme.dart';
+import '../core/utils/toast_service.dart';
 
 class UnitDetailScreen extends ConsumerStatefulWidget {
   final String unitId;
@@ -312,12 +313,7 @@ class _UnitDetailScreenState extends ConsumerState<UnitDetailScreen> {
                           final updated = unit.copyWith(maintenanceAreas: currentAreas);
                           ref.read(unitProvider.notifier).updateUnit(updated);
                           Navigator.pop(sheetContext);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Updated maintenance areas for ${unit.name}!'),
-                              backgroundColor: RampColors.success,
-                            ),
-                          );
+                          ToastService.showSuccess('Updated maintenance areas for ${unit.name}!');
                         },
                       ),
                     ],
@@ -479,13 +475,7 @@ class _UnitDetailScreenState extends ConsumerState<UnitDetailScreen> {
 
                       ref.read(unitProvider.notifier).updateUnit(updatedUnit);
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Submeter readings saved to history!'),
-                          backgroundColor: RampColors.success,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+                      ToastService.showSuccess('Submeter readings saved to history!');
                     },
                   ),
                 ],
@@ -610,14 +600,7 @@ class _UnitDetailScreenState extends ConsumerState<UnitDetailScreen> {
                                 status: 'Active',
                               ));
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  '${unit.name} marked as Occupied by ${tObj.name}!'),
-                              backgroundColor: RampColors.success,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
+                          ToastService.showSuccess('${unit.name} marked as Occupied by ${tObj.name}!');
                         },
                 ),
               ],
@@ -706,22 +689,12 @@ class _UnitDetailScreenState extends ConsumerState<UnitDetailScreen> {
                 _showMarkOccupiedModal(context, unit);
               } else if (status == 'Vacant') {
                 ref.read(unitProvider.notifier).markVacant(unit.id);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${unit.name} status changed to Vacant!'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                ToastService.showInfo('${unit.name} status changed to Vacant!');
               } else {
                 ref
                     .read(unitProvider.notifier)
                     .updateUnit(unit.copyWith(status: status));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${unit.name} status changed to $status!'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                ToastService.showInfo('${unit.name} status changed to $status!');
               }
             },
             itemBuilder: (context) => const [

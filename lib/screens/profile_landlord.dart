@@ -10,6 +10,7 @@ import '../core/navigation/custom_page_transitions.dart';
 import '../core/services/report_export_service.dart';
 import '../core/state/ramp_state.dart';
 import '../core/theme/ramp_theme.dart';
+import '../core/utils/toast_service.dart';
 import '../features/settings/settings_screen.dart';
 import 'landlord_profile_edit_screen.dart';
 
@@ -291,21 +292,11 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                                   if (!context.mounted) return;
                                   Navigator.pop(context);
                                   HapticFeedback.mediumImpact();
-                                  ScaffoldMessenger.of(context)
-                                      .showSnackBar(SnackBar(
-                                    backgroundColor: RampColors.primary,
-                                    duration: const Duration(seconds: 6),
-                                    content: Text('PDF saved to $path'),
-                                  ));
+                                  ToastService.showInfo('PDF saved to $path');
                                 } catch (error) {
                                   setModalState(() => isGenerating = false);
                                   if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context)
-                                      .showSnackBar(SnackBar(
-                                    backgroundColor: RampColors.danger,
-                                    content:
-                                        Text('Could not export PDF: $error'),
-                                  ));
+                                  ToastService.showError('Could not export PDF: $error');
                                 }
                               },
                             ),
@@ -391,13 +382,7 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                 persistAppSettings(defaultLateFee: newFee);
                 Navigator.pop(context);
                 HapticFeedback.lightImpact();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    backgroundColor: RampColors.success,
-                    content:
-                        Text('Late Fee setting updated to ₱${newFee.toInt()}!'),
-                  ),
-                );
+                ToastService.showSuccess('Late Fee setting updated to ₱${newFee.toInt()}!');
               },
               label: const Text('SAVE SETTING'),
             ),
@@ -470,13 +455,8 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
               onPressed: () {
                 Navigator.pop(context);
                 HapticFeedback.lightImpact();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    backgroundColor: RampColors.success,
-                    content: Text(
-                        'Monthly Due Date setting updated to ${ref.read(dueDateDayProvider)}th of the month!'),
-                  ),
-                );
+                ToastService.showSuccess(
+                    'Monthly Due Date setting updated to ${ref.read(dueDateDayProvider)}th of the month!');
               },
               label: const Text('SAVE SETTING'),
             ),

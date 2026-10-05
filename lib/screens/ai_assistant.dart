@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:intl/intl.dart';
 
+import '../core/utils/toast_service.dart';
 import '../providers/providers.dart';
 
 class ChatMessage {
@@ -196,25 +197,7 @@ class _AiAssistantBottomSheetState
         tenants.where((t) => t.balance > 0 || t.isLate).toList();
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.mark_email_read_rounded, color: Colors.white),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Payment reminders generated for all late tenants!',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: Color(0xFF0D6EFD),
-          duration: Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ToastService.showInfo('Payment reminders generated for all late tenants!');
     }
 
     if (lateTenants.isEmpty) {

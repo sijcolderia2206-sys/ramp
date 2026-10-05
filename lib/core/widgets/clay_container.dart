@@ -2,9 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Flat & Minimalist Container
-/// Renders a flat, clean container with rounded corners and interactive feedback.
-/// Replaces the old 3D claymorphism style.
+/// Neumorphic Container
+/// Renders a soft, extruded neumorphic container with rounded corners and interactive feedback.
 class ClayContainer extends StatefulWidget {
   final Widget? child;
   final double? width;
@@ -95,14 +94,53 @@ class _ClayContainerState extends State<ClayContainer>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final baseColor =
-        widget.color ?? (isDark ? theme.colorScheme.surface : Colors.white);
+    final baseColor = widget.color ?? theme.colorScheme.surface;
 
     return AnimatedBuilder(
       animation: _pressAnimation,
       builder: (context, child) {
         final pressFactor = _pressAnimation.value;
         final scale = 1.0 - (0.02 * pressFactor); // Subtle scale effect
+
+        final isInset = widget.isInset || (widget.onTap != null && pressFactor > 0.5);
+        final baseBlur = widget.depth;
+        final baseOffset = widget.depth;
+
+        List<BoxShadow> buildShadows() {
+          if (widget.gradient != null || widget.color == Colors.transparent) return [];
+          
+          final darkShadowColor = isDark 
+              ? Colors.black.withValues(alpha: 0.5) 
+              : const Color(0xFFA3B1C6).withValues(alpha: 0.6);
+          final lightShadowColor = isDark 
+              ? Colors.white.withValues(alpha: 0.05) 
+              : Colors.white.withValues(alpha: 0.8);
+
+          if (isInset) {
+            // Simplified inset simulation for Container since native Flutter doesn't have InnerShadow
+            // Reverting to flat/no shadow to represent pressed state easily
+            return [
+               BoxShadow(
+                 color: darkShadowColor.withValues(alpha: 0.3),
+                 blurRadius: baseBlur / 2,
+                 offset: Offset(baseOffset / 2, baseOffset / 2),
+               )
+            ];
+          }
+
+          return [
+            BoxShadow(
+              color: darkShadowColor,
+              blurRadius: baseBlur * 1.5,
+              offset: Offset(baseOffset, baseOffset),
+            ),
+            BoxShadow(
+              color: lightShadowColor,
+              blurRadius: baseBlur * 1.5,
+              offset: Offset(-baseOffset, -baseOffset),
+            ),
+          ];
+        }
 
         Widget result = Container(
           width: widget.width,
@@ -113,14 +151,8 @@ class _ClayContainerState extends State<ClayContainer>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(widget.borderRadius),
             gradient: widget.gradient,
-            border: widget.border ??
-                Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.black.withValues(alpha: 0.05),
-                  width: 1.0,
-                ),
-            boxShadow: null,
+            border: widget.border,
+            boxShadow: buildShadows(),
           ),
           child: Material(
             color: widget.gradient != null ? Colors.transparent : baseColor,

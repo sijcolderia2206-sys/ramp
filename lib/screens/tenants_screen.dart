@@ -6,8 +6,10 @@ import 'package:intl/intl.dart';
 import '../providers/providers.dart';
 import '../core/widgets/core_widgets.dart';
 import '../core/theme/ramp_theme.dart';
+import '../core/utils/toast_service.dart';
 import '../core/navigation/custom_page_transitions.dart';
 import '../core/services/reminder_launcher_service.dart';
+import '../core/widgets/clay_container.dart';
 import 'tenant_form.dart';
 import 'tenant_profile.dart';
 
@@ -83,12 +85,26 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor:
-          isDark ? Theme.of(context).colorScheme.surface : Colors.white,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
       builder: (context) {
-        return Padding(
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                blurRadius: 10,
+                offset: const Offset(5, 5),
+              ),
+              BoxShadow(
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                blurRadius: 10,
+                offset: const Offset(-5, -5),
+              ),
+            ],
+          ),
           padding: EdgeInsets.only(
             left: 20,
             right: 20,
@@ -168,15 +184,9 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
                       await Clipboard.setData(ClipboardData(text: message));
                     }
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(launched
-                            ? 'SMS app opened for ${tenant.phone}! Health updated.'
-                            : 'Reminder copied to clipboard! (SMS launcher unavailable)'),
-                        backgroundColor: RampColors.primary,
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
+                    ToastService.showInfo(launched
+                        ? 'SMS app opened for ${tenant.phone}! Health updated.'
+                        : 'Reminder copied to clipboard! (SMS launcher unavailable)');
                   },
                 ),
                 ListTile(
@@ -206,15 +216,9 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
                             messengerHandle: tenant.messengerHandle,
                             message: message);
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(launched
-                            ? 'Opening Messenger for ${tenant.name}! Reminder text copied to clipboard.'
-                            : 'Reminder copied to clipboard! (Messenger launcher unavailable)'),
-                        backgroundColor: const Color(0xFF0084FF),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
+                    ToastService.showInfo(launched
+                        ? 'Opening Messenger for ${tenant.name}! Reminder text copied to clipboard.'
+                        : 'Reminder copied to clipboard! (Messenger launcher unavailable)');
                   },
                 ),
                 ListTile(
@@ -241,14 +245,8 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
                         .incrementTenantReminder(tenant.id, channel: 'SMS');
                     await Clipboard.setData(ClipboardData(text: message));
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                            'Rent reminder text copied to clipboard! Health updated.'),
-                        backgroundColor: RampColors.success,
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
+                    ToastService.showSuccess(
+                        'Rent reminder text copied to clipboard! Health updated.');
                   },
                 ),
               ],
@@ -285,13 +283,7 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
 
     if (confirmed && context.mounted) {
       ref.read(tenantProvider.notifier).deleteTenant(tenant.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${tenant.name} permanently deleted.'),
-          backgroundColor: RampColors.danger,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ToastService.showInfo('${tenant.name} permanently deleted.');
     }
   }
 
@@ -334,16 +326,29 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
                 : const Color(0xFF059669);
     final isExpanded = _expandedTenantIds.contains(tenant.id);
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: theme.colorScheme.outlineVariant,
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+            blurRadius: 10,
+            offset: const Offset(5, 5),
+          ),
+          BoxShadow(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+            blurRadius: 10,
+            offset: const Offset(-5, -5),
+          ),
+        ],
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
         onTap: () => _openTenantProfile(tenant),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -498,56 +503,132 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 8),
-                          visualDensity: VisualDensity.compact,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                              blurRadius: 5,
+                              offset: const Offset(3, 3),
+                            ),
+                            BoxShadow(
+                              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                              blurRadius: 5,
+                              offset: const Offset(-3, -3),
+                            ),
+                          ],
                         ),
-                        onPressed: () =>
-                            _showSendReminderModal(context, tenant),
-                        icon: const Icon(Icons.notifications_none_rounded,
-                            size: 16),
-                        label: const FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text('REMIND'),
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide.none,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 8),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          onPressed: () =>
+                              _showSendReminderModal(context, tenant),
+                          icon: const Icon(Icons.notifications_none_rounded,
+                              size: 16),
+                          label: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text('REMIND'),
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 8),
-                          visualDensity: VisualDensity.compact,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                              blurRadius: 5,
+                              offset: const Offset(3, 3),
+                            ),
+                            BoxShadow(
+                              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                              blurRadius: 5,
+                              offset: const Offset(-3, -3),
+                            ),
+                          ],
                         ),
-                        onPressed: () =>
-                            _openTenantForm(existingTenant: tenant),
-                        icon: const Icon(Icons.edit_outlined, size: 16),
-                        label: const FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text('EDIT'),
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide.none,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 8),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          onPressed: () =>
+                              _openTenantForm(existingTenant: tenant),
+                          icon: const Icon(Icons.edit_outlined, size: 16),
+                          label: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text('EDIT'),
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    IconButton(
-                      tooltip: 'Open full tenant record',
-                      onPressed: () => _openTenantProfile(tenant),
-                      icon: const Icon(Icons.open_in_new_rounded, size: 19),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                            blurRadius: 5,
+                            offset: const Offset(3, 3),
+                          ),
+                          BoxShadow(
+                            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                            blurRadius: 5,
+                            offset: const Offset(-3, -3),
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        tooltip: 'Open full tenant record',
+                        onPressed: () => _openTenantProfile(tenant),
+                        icon: const Icon(Icons.open_in_new_rounded, size: 19),
+                      ),
                     ),
-                    IconButton(
-                      tooltip: 'Delete tenant',
-                      onPressed: () => _confirmDeleteTenant(context, tenant),
-                      icon: const Icon(Icons.delete_outline_rounded,
-                          size: 19, color: RampColors.danger),
+                    const SizedBox(width: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                            blurRadius: 5,
+                            offset: const Offset(3, 3),
+                          ),
+                          BoxShadow(
+                            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                            blurRadius: 5,
+                            offset: const Offset(-3, -3),
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        tooltip: 'Delete tenant',
+                        onPressed: () => _confirmDeleteTenant(context, tenant),
+                        icon: const Icon(Icons.delete_outline_rounded,
+                            size: 19, color: RampColors.danger),
+                      ),
                     ),
                   ],
                 ),
               ],
             ],
           ),
+        ),
         ),
       ),
     );
@@ -629,14 +710,12 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
         allTenants.where((t) => !t.isArchived && t.isDueSoon).length;
 
     return Scaffold(
-      backgroundColor: isDark
-          ? Theme.of(context).scaffoldBackgroundColor
-          : RampColors.background,
+      backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
       appBar: AppBar(
         title: Text(_showArchived ? 'Archived Tenants' : 'Tenants',
             style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
         backgroundColor:
-            isDark ? Theme.of(context).scaffoldBackgroundColor : Colors.white,
+            isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
         elevation: 0,
         actions: [
           PopupMenuButton<TenantSortOption>(
@@ -755,40 +834,53 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
                           if (f == 'Due Soon') badgeCount = dueSoonCount;
 
                           return Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: FilterChip(
-                              visualDensity: VisualDensity.compact,
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                              label: Text(
-                                badgeCount > 0 ? '$f ($badgeCount)' : f,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: isSelected
-                                          ? Theme.of(context)
-                                              .colorScheme
-                                              .onPrimary
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .onSurface,
-                                    ),
+                            padding: const EdgeInsets.only(right: 8.0, top: 8.0, bottom: 8.0),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: isSelected ? [] : [
+                                  BoxShadow(
+                                    color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                                    blurRadius: 5,
+                                    offset: const Offset(3, 3),
+                                  ),
+                                  BoxShadow(
+                                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                                    blurRadius: 5,
+                                    offset: const Offset(-3, -3),
+                                  ),
+                                ],
                               ),
-                              selected: isSelected,
-                              onSelected: (_) =>
-                                  setState(() => _selectedFilter = f),
-                              selectedColor:
-                                  Theme.of(context).colorScheme.primary,
-                              backgroundColor:
-                                  Theme.of(context).colorScheme.surface,
-                              checkmarkColor:
-                                  Theme.of(context).colorScheme.onPrimary,
-                              side: BorderSide(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outlineVariant,
+                              child: FilterChip(
+                                visualDensity: VisualDensity.compact,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                label: Text(
+                                  badgeCount > 0 ? '$f ($badgeCount)' : f,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: isSelected
+                                            ? Theme.of(context)
+                                                .colorScheme
+                                                .onPrimary
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .onSurface,
+                                      ),
+                                ),
+                                selected: isSelected,
+                                onSelected: (_) =>
+                                    setState(() => _selectedFilter = f),
+                                selectedColor:
+                                    Theme.of(context).colorScheme.primary,
+                                backgroundColor: Colors.transparent,
+                                checkmarkColor:
+                                    Theme.of(context).colorScheme.onPrimary,
+                                side: BorderSide.none,
                               ),
                             ),
                           );
@@ -881,15 +973,20 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 16, vertical: 8),
                                     decoration: BoxDecoration(
-                                      color: isDark
-                                          ? const Color(0xFF1E293B)
-                                          : Colors.white,
+                                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
                                       borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(
-                                        color: isDark
-                                            ? const Color(0xFF334155)
-                                            : RampColors.border,
-                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                                          blurRadius: 10,
+                                          offset: const Offset(5, 5),
+                                        ),
+                                        BoxShadow(
+                                          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                                          blurRadius: 10,
+                                          offset: const Offset(-5, -5),
+                                        ),
+                                      ],
                                     ),
                                     child: Row(
                                       mainAxisAlignment:
@@ -954,13 +1051,36 @@ class _TenantsScreenState extends ConsumerState<TenantsScreen> {
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: null,
-        onPressed: () => _openTenantForm(),
-        icon: const Icon(Icons.person_add_rounded),
-        label: const Text(
-          'Add Tenant',
-          style: TextStyle(fontWeight: FontWeight.bold),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+              blurRadius: 10,
+              offset: const Offset(5, 5),
+            ),
+            BoxShadow(
+              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+              blurRadius: 10,
+              offset: const Offset(-5, -5),
+            ),
+          ],
+        ),
+        child: FloatingActionButton.extended(
+          heroTag: null,
+          elevation: 0,
+          focusElevation: 0,
+          hoverElevation: 0,
+          highlightElevation: 0,
+          backgroundColor: Colors.transparent,
+          onPressed: () => _openTenantForm(),
+          icon: Icon(Icons.person_add_rounded, color: isDark ? Colors.white : RampColors.primary),
+          label: Text(
+            'Add Tenant',
+            style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : RampColors.primary),
+          ),
         ),
       ),
     );

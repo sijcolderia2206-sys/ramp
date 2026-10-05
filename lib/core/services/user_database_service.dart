@@ -183,12 +183,24 @@ class UserDatabaseService {
     final uid = 'user_$tenantId';
 
     // Attempt creation in Firebase Auth with default password "tenant123"
+    // Use a secondary Firebase app to prevent logging out the current admin/landlord
     try {
       if (Firebase.apps.isNotEmpty) {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        FirebaseApp secondaryApp;
+        try {
+          secondaryApp = Firebase.app('SecondaryApp');
+        } catch (e) {
+          secondaryApp = await Firebase.initializeApp(
+            name: 'SecondaryApp',
+            options: Firebase.app().options,
+          );
+        }
+        await FirebaseAuth.instanceFor(app: secondaryApp)
+            .createUserWithEmailAndPassword(
           email: effectiveEmail,
           password: 'tenant123',
         );
+        // Do not sign in on the main instance, keeps admin logged in.
       }
     } catch (e) {
       debugPrint('ℹ️ Auth tenant account setup notice [$effectiveEmail]: $e');

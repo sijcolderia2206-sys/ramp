@@ -82,20 +82,23 @@ class SupabaseService {
         sanitized[key] = text;
       } else if (value is num) {
         // Clamp financial and numerical amounts to non-negative upper bounds
-        if (key.toLowerCase().contains('rent') ||
+        if (key == 'rentDueDay') {
+          sanitized[key] = value.toInt().clamp(1, 31);
+        } else if (key == 'rating') {
+          sanitized[key] = value.toInt().clamp(1, 5);
+        } else if (key.toLowerCase().contains('bedrooms') ||
+            key.toLowerCase().contains('bathrooms') ||
+            key.toLowerCase().contains('days')) {
+          sanitized[key] = value.toInt().clamp(0, 100);
+        } else if (key.toLowerCase().contains('rent') ||
             key.toLowerCase().contains('amount') ||
             key.toLowerCase().contains('cost') ||
             key.toLowerCase().contains('bill') ||
             key.toLowerCase().contains('fee') ||
             key.toLowerCase().contains('balance')) {
           sanitized[key] = value.toDouble().clamp(0.0, 50000000.0);
-        } else if (key == 'rentDueDay') {
-          sanitized[key] = value.toInt().clamp(1, 31);
-        } else if (key == 'rating') {
-          sanitized[key] = value.toInt().clamp(1, 5);
-        } else if (key.toLowerCase().contains('bedrooms') ||
-            key.toLowerCase().contains('bathrooms')) {
-          sanitized[key] = value.toInt().clamp(0, 100);
+        } else if (value is double && value == value.truncateToDouble()) {
+          sanitized[key] = value.toInt();
         }
       } else if (value is DateTime) {
         if (value.year < 1970 || value.year > 2150) {

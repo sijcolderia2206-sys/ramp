@@ -229,4 +229,48 @@ void main() {
       (startingBalance - 1000).clamp(0, double.infinity),
     );
   });
+
+  test('payments can be filtered and sorted by payment method', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    container.read(paymentProvider.notifier).addPayment(
+          const PaymentData(
+            id: 'pay-cash',
+            month: 'September 2026',
+            amount: 5000,
+            method: 'Cash',
+            paymentMethod: 'Cash',
+          ),
+        );
+    container.read(paymentProvider.notifier).addPayment(
+          const PaymentData(
+            id: 'pay-gcash',
+            month: 'September 2026',
+            amount: 3000,
+            method: 'GCash',
+            paymentMethod: 'GCash',
+          ),
+        );
+    container.read(paymentProvider.notifier).addPayment(
+          const PaymentData(
+            id: 'pay-maya',
+            month: 'September 2026',
+            amount: 2000,
+            method: 'Maya',
+            paymentMethod: 'Maya',
+          ),
+        );
+
+    final allPayments = container.read(paymentProvider);
+    final gcashPayments = allPayments
+        .where((p) => p.method.toLowerCase() == 'gcash')
+        .toList();
+    expect(gcashPayments.any((p) => p.id == 'pay-gcash'), isTrue);
+
+    final sortedByMethod = List<PaymentData>.from(allPayments);
+    sortedByMethod.sort((a, b) => a.method.compareTo(b.method));
+    expect(
+        sortedByMethod.map((p) => p.method).toList().contains('Cash'), isTrue);
+  });
 }

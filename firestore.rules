@@ -7,12 +7,14 @@ service cloud.firestore {
     }
 
     function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      let doc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return doc != null ? doc.data : null;
     }
 
     function isLandlordOrAdmin() {
-      return isAuthenticated() &&
-        (getUserData().role == 'landlord' || getUserData().role == 'superAdmin');
+      let userData = getUserData();
+      return isAuthenticated() && userData != null &&
+        (userData.role == 'landlord' || userData.role == 'superAdmin');
     }
 
     // Users Collection

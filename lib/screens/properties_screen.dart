@@ -8,8 +8,10 @@ import 'package:latlong2/latlong.dart';
 import '../core/widgets/location_picker_map.dart';
 import '../providers/providers.dart';
 import '../core/widgets/core_widgets.dart';
+import '../core/widgets/clay_container.dart';
 import '../core/navigation/custom_page_transitions.dart';
 import '../core/theme/ramp_theme.dart';
+import '../core/utils/toast_service.dart';
 import '../core/validation/app_validators.dart';
 import 'unit_detail.dart';
 
@@ -135,7 +137,7 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor:
-          isDark ? Theme.of(context).colorScheme.surface : Colors.white,
+          isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -339,10 +341,35 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                 const SizedBox(height: 20),
 
                 // Apply Button
-                BouncePillButton(
-                  text: 'APPLY FILTERS',
-                  onPressed: () => Navigator.pop(context),
-                  height: 48,
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    height: 48,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                          blurRadius: 10,
+                          offset: const Offset(5, 5),
+                        ),
+                        BoxShadow(
+                          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                          blurRadius: 10,
+                          offset: const Offset(-5, -5),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      'APPLY FILTERS',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        color: RampColors.primary,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -393,7 +420,7 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           backgroundColor:
-              isDark ? Theme.of(context).colorScheme.surface : Colors.white,
+              isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text(
@@ -701,15 +728,8 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                 style: GoogleFonts.poppins(color: RampColors.mutedText),
               ),
             ),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: RampColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              icon: const Icon(Icons.save_rounded, size: 16),
-              onPressed: () {
+            GestureDetector(
+              onTap: () {
                 if (!(formKey.currentState?.validate() ?? false)) return;
                 final name = nameCtrl.text.trim();
                 final rent = double.tryParse(rentCtrl.text.trim());
@@ -720,12 +740,7 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                     unit.id != existingUnit?.id &&
                     unit.name.trim().toLowerCase() == name.toLowerCase());
                 if (duplicateName) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('A unit with this name already exists.'),
-                      backgroundColor: RampColors.danger,
-                    ),
-                  );
+                  ToastService.showError('A unit with this name already exists.');
                   return;
                 }
                 final imageUrl = selectedImage?.path ??
@@ -801,18 +816,40 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
                   ref.read(unitProvider.notifier).addUnit(newUnit);
                 }
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(isEditing
-                        ? 'Unit details updated!'
-                        : 'New unit created successfully.'),
-                    backgroundColor: RampColors.success,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                ToastService.showSuccess(isEditing
+                    ? 'Unit details updated!'
+                    : 'New unit created successfully.');
               },
-              label: Text(isEditing ? 'SAVE DETAILS' : 'SAVE UNIT',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                      blurRadius: 10,
+                      offset: const Offset(5, 5),
+                    ),
+                    BoxShadow(
+                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                      blurRadius: 10,
+                      offset: const Offset(-5, -5),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.save_rounded, size: 16, color: RampColors.primary),
+                    const SizedBox(width: 8),
+                    Text(
+                      isEditing ? 'SAVE DETAILS' : 'SAVE UNIT',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: RampColors.primary),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -827,7 +864,7 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor:
-            isDark ? Theme.of(context).colorScheme.surface : Colors.white,
+            isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'Delete Property',
@@ -853,13 +890,7 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
             onPressed: () {
               ref.read(unitProvider.notifier).deleteUnit(unit.id);
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Property deleted'),
-                  backgroundColor: RampColors.danger,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+              ToastService.showInfo('Property deleted');
             },
             icon: const Icon(Icons.delete_rounded,
                 color: RampColors.danger, size: 16),
@@ -924,8 +955,8 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
 
     return Scaffold(
       backgroundColor: isDark
-          ? Theme.of(context).scaffoldBackgroundColor
-          : RampColors.background,
+          ? const Color(0xFF1E293B)
+          : const Color(0xFFE0E5EC),
       appBar: AppBar(
         title: Text(
           'Properties',
@@ -935,7 +966,7 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
           ),
         ),
         backgroundColor:
-            isDark ? Theme.of(context).scaffoldBackgroundColor : Colors.white,
+            isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
         elevation: 0,
         actions: [
           IconButton(
@@ -1150,13 +1181,37 @@ class _PropertiesScreenState extends ConsumerState<PropertiesScreen> {
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: null,
-        onPressed: () => _showAddEditDialog(),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text(
-          'Add Unit',
-          style: TextStyle(fontWeight: FontWeight.bold),
+      floatingActionButton: GestureDetector(
+        onTap: () => _showAddEditDialog(),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
+                blurRadius: 10,
+                offset: const Offset(5, 5),
+              ),
+              BoxShadow(
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+                blurRadius: 10,
+                offset: const Offset(-5, -5),
+              ),
+            ],
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add_rounded, color: RampColors.primary),
+              SizedBox(width: 8),
+              Text(
+                'Add Unit',
+                style: TextStyle(fontWeight: FontWeight.bold, color: RampColors.primary),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1309,13 +1364,18 @@ class _PropertyUnitCardState extends State<_PropertyUnitCard> {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? Theme.of(context).colorScheme.surface : Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: const Offset(5, 5),
+          ),
+          BoxShadow(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
+            blurRadius: 10,
+            offset: const Offset(-5, -5),
           ),
         ],
       ),

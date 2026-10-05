@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../core/services/pdf_receipt_service.dart';
 import '../core/theme/ramp_theme.dart';
+import '../core/utils/toast_service.dart';
 import '../models/models.dart';
 
 void showDigitalReceiptModal(
@@ -298,15 +299,7 @@ void showDigitalReceiptModal(
                                         ClipboardData(
                                             text: payment.referenceNumber),
                                       );
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                              'Reference number copied to clipboard!'),
-                                          behavior: SnackBarBehavior.floating,
-                                          duration: Duration(seconds: 2),
-                                        ),
-                                      );
+                                      ToastService.showInfo('Reference number copied to clipboard!');
                                     },
                                     child: Container(
                                       padding: const EdgeInsets.all(8),

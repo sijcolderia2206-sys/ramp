@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:ramp/core/services/location_service.dart';
 import 'package:ramp/core/services/routing_service.dart';
 import 'package:ramp/core/theme/ramp_theme.dart';
+import 'package:ramp/core/utils/toast_service.dart';
 
 class LocationPickerResult {
   final LatLng coordinates;
@@ -137,12 +138,7 @@ class _LocationPickerMapDialogState extends State<LocationPickerMapDialog> {
       _mapController.move(_currentLocation!, 16.5);
       _fetchRoadRoute();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Acquiring your current GPS position...'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      ToastService.showInfo('Acquiring your current GPS position...');
     }
   }
 

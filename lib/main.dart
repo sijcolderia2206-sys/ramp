@@ -9,6 +9,7 @@ import 'theme.dart';
 import 'providers/providers.dart';
 import 'screens/screens.dart';
 import 'core/widgets/core_widgets.dart';
+import 'core/utils/toast_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -96,6 +97,7 @@ class _RampAppState extends ConsumerState<RampApp> {
     }
 
     return MaterialApp(
+      scaffoldMessengerKey: ToastService.scaffoldKey,
       title: 'RAMP',
       debugShowCheckedModeBanner: false,
       theme: RampTheme.lightTheme,
@@ -129,17 +131,21 @@ class _SessionRestoreScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 68,
-                height: 68,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Icon(
-                  Icons.apartment_rounded,
-                  size: 34,
-                  color: theme.colorScheme.primary,
+              SizedBox(
+                width: 150, // A balanced, "perfect" size for a logo
+                height: 150, 
+                // Removed Container, BoxDecoration, and Clip.antiAlias completely
+                // so there is no shape, no background, just the raw image.
+                child: Image.asset(
+                  'assets/logo.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Icon(
+                      Icons.image_not_supported, 
+                      size: 50, 
+                      color: theme.colorScheme.error,
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: 20),
@@ -227,68 +233,105 @@ class LandlordShell extends ConsumerWidget {
             children: [
               const OfflineSyncBanner(),
               Expanded(
-                child: IndexedStack(
-                  index: currentIndex,
-                  children: _screens,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (Widget child, Animation<double> animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0.0, 0.05),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: KeyedSubtree(
+                    key: ValueKey<int>(currentIndex),
+                    child: _screens[currentIndex],
+                  ),
                 ),
               ),
             ],
           ),
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: currentIndex,
-            onDestinationSelected: (index) {
-              HapticFeedback.selectionClick();
-              ref.read(bottomNavIndexProvider.notifier).state = index;
-            },
-            elevation: 2,
-            height: 66,
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            indicatorColor: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF0284C7).withValues(alpha: 0.20)
-                : const Color(0xFFE0F2FE),
-            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: GradientIcon(
-                  icon: Icons.home_rounded,
-                  size: 24,
-                ),
-                label: 'Home',
+          extendBody: true,
+          bottomNavigationBar: SafeArea(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
-              NavigationDestination(
-                icon: Icon(Icons.apartment_outlined),
-                selectedIcon: GradientIcon(
-                  icon: Icons.apartment_rounded,
-                  size: 24,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(30),
+                child: NavigationBar(
+                  selectedIndex: currentIndex,
+                  onDestinationSelected: (index) {
+                    HapticFeedback.selectionClick();
+                    ref.read(bottomNavIndexProvider.notifier).state = index;
+                  },
+                  elevation: 0,
+                  height: 66,
+                  backgroundColor: Colors.transparent,
+                  indicatorColor: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF0284C7).withValues(alpha: 0.20)
+                      : const Color(0xFFE0F2FE),
+                  labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
+                  destinations: const [
+                    NavigationDestination(
+                      icon: Icon(Icons.home_outlined),
+                      selectedIcon: GradientIcon(
+                        icon: Icons.home_rounded,
+                        size: 24,
+                      ),
+                      label: 'Home',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.apartment_outlined),
+                      selectedIcon: GradientIcon(
+                        icon: Icons.apartment_rounded,
+                        size: 24,
+                      ),
+                      label: 'Units',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.people_outline_rounded),
+                      selectedIcon: GradientIcon(
+                        icon: Icons.people_rounded,
+                        size: 24,
+                      ),
+                      label: 'Tenants',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.build_outlined),
+                      selectedIcon: GradientIcon(
+                        icon: Icons.build_rounded,
+                        size: 24,
+                      ),
+                      label: 'Repairs',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.person_outline_rounded),
+                      selectedIcon: GradientIcon(
+                        icon: Icons.person_rounded,
+                        size: 24,
+                      ),
+                      label: 'Profile',
+                    ),
+                  ],
                 ),
-                label: 'Units',
               ),
-              NavigationDestination(
-                icon: Icon(Icons.people_outline_rounded),
-                selectedIcon: GradientIcon(
-                  icon: Icons.people_rounded,
-                  size: 24,
-                ),
-                label: 'Tenants',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.build_outlined),
-                selectedIcon: GradientIcon(
-                  icon: Icons.build_rounded,
-                  size: 24,
-                ),
-                label: 'Repairs',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.person_outline_rounded),
-                selectedIcon: GradientIcon(
-                  icon: Icons.person_rounded,
-                  size: 24,
-                ),
-                label: 'Profile',
-              ),
-            ],
+            ),
           ),
         ),
       ),
