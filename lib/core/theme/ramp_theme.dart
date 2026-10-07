@@ -75,6 +75,14 @@ class RampTheme {
     offset: Offset.zero,
   );
 
+  static const List<BoxShadow> standardShadow = [
+    BoxShadow(
+      color: Color(0x0D000000),
+      blurRadius: 10,
+      offset: Offset(0, 4),
+    ),
+  ];
+
   /// Standard 20px card border radius
   static final BorderRadius borderRadius20 = BorderRadius.circular(20);
 
@@ -446,7 +454,9 @@ class StatusPill extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
             width: 7,
             height: 7,
             decoration: BoxDecoration(
@@ -455,14 +465,16 @@ class StatusPill extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          Text(
-            status,
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
             style: GoogleFonts.poppins(
               color: textColor,
               fontSize: fontSize,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.2,
             ),
+            child: Text(status),
           ),
         ],
       ),

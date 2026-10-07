@@ -54,6 +54,8 @@ abstract class Unit with _$Unit {
 
   factory Unit.fromJson(Map<String, dynamic> json) => _$UnitFromJson(json);
 
+  double get rentAmount => rent;
+
   DateTime get effectiveDueDate => dueDate ?? DateTime.now();
 
   bool get isOccupied => status.toLowerCase() == 'occupied';

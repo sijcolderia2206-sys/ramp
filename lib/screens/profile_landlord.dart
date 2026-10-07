@@ -1,3 +1,4 @@
+import 'dart:io';
 import '../core/widgets/adaptive_row.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +13,8 @@ import '../core/state/ramp_state.dart';
 import '../core/theme/ramp_theme.dart';
 import '../core/utils/toast_service.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/settings/sub_screens/billing_rules_settings_screen.dart';
+import '../features/settings/sub_screens/security_settings_screen.dart';
 import 'landlord_profile_edit_screen.dart';
 
 class ProfileLandlordScreen extends ConsumerStatefulWidget {
@@ -514,9 +517,9 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                 const Divider(height: 24),
                 ListTile(
                   leading:
-                      const Icon(Icons.tune_rounded, color: RampColors.primary),
-                  title: const Text('Advanced Preferences'),
-                  subtitle: const Text('Biometrics, currency & security logs'),
+                      const Icon(Icons.settings_suggest_rounded, color: RampColors.primary),
+                  title: const Text('All Settings Categories'),
+                  subtitle: const Text('Account, billing, security, notifications & data'),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () {
                     Navigator.pop(context);
@@ -528,25 +531,28 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                 ListTile(
                   leading: const Icon(Icons.monetization_on_rounded,
                       color: Color(0xFFD97706)),
-                  title: const Text('Late Fee Configuration'),
+                  title: const Text('Financial & Billing Rules'),
                   subtitle: Text(
-                      'Current: ${_currencyFormat.format(ref.read(lateFeeAmountProvider))}'),
+                      'Rent due day: ${ref.read(dueDateDayProvider)}th • Late fee: ${_currencyFormat.format(ref.read(lateFeeAmountProvider))}'),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () {
                     Navigator.pop(context);
-                    _showEditLateFeeDialog(context);
+                    Navigator.of(context, rootNavigator: true).push(
+                      SlideUpFadeRoute(page: const BillingRulesSettingsScreen()),
+                    );
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.event_note_rounded,
+                  leading: const Icon(Icons.security_rounded,
                       color: RampColors.primary),
-                  title: const Text('Default Rent Due Date'),
-                  subtitle: Text(
-                      'Fallback for units without an override: ${ref.read(dueDateDayProvider)}th of month'),
+                  title: const Text('Security & Biometrics'),
+                  subtitle: const Text('Authentication, lock policy & audit trail'),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () {
                     Navigator.pop(context);
-                    _showEditDueDateDialog(context);
+                    Navigator.of(context, rootNavigator: true).push(
+                      SlideUpFadeRoute(page: const SecuritySettingsScreen()),
+                    );
                   },
                 ),
               ],
@@ -612,14 +618,28 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                             CircleAvatar(
                               radius: 36,
                               backgroundColor: accent,
-                              child: Text(
-                                'EM',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
+                              backgroundImage: (landlordProfile.avatarPath != null &&
+                                      landlordProfile.avatarPath!.isNotEmpty &&
+                                      File(landlordProfile.avatarPath!).existsSync())
+                                  ? FileImage(File(landlordProfile.avatarPath!))
+                                  : null,
+                              child: (landlordProfile.avatarPath == null ||
+                                      landlordProfile.avatarPath!.isEmpty ||
+                                      !File(landlordProfile.avatarPath!).existsSync())
+                                  ? Text(
+                                      landlordProfile.name.trim().isEmpty
+                                          ? 'AP'
+                                          : landlordProfile.name
+                                              .trim()
+                                              .substring(0, 1)
+                                              .toUpperCase(),
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 26,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : null,
                             ),
                             const SizedBox(width: 16),
                             Expanded(
@@ -667,6 +687,8 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                                             initialRole: landlordProfile.role,
                                             initialContact:
                                                 landlordProfile.contact,
+                                            initialAvatarPath:
+                                                landlordProfile.avatarPath,
                                             onSaved: (values) {
                                               ref
                                                   .read(landlordProfileProvider
@@ -675,11 +697,13 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                                                 name: values.name,
                                                 role: values.role,
                                                 contact: values.contact,
+                                                avatarPath: values.avatarPath,
                                               );
                                               persistAppSettings(
                                                 landlordName: values.name,
                                                 landlordRole: values.role,
                                                 landlordContact: values.contact,
+                                                landlordAvatarPath: values.avatarPath,
                                               );
                                             },
                                           ),

@@ -70,6 +70,10 @@
 	<string>RAMP requires location access to track maintenance dispatch and pin unit locations on the map.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>RAMP requires background location for live maintenance technician dispatch tracking.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>RAMP needs camera access to take profile pictures and capture property or receipt photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>RAMP needs photo library access to select profile pictures and upload property or receipt images.</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>sms</string>

@@ -74,6 +74,17 @@ abstract class Ticket with _$Ticket {
 
   factory Ticket.fromJson(Map<String, dynamic> json) => _$TicketFromJson(json);
 
+  DateTime get reportedAt => createdAt ?? date ?? DateTime.now();
+
+  DateTime? get completedAt {
+    for (final entry in statusHistory) {
+      if (entry.status.toLowerCase() == 'completed') {
+        return entry.timestamp;
+      }
+    }
+    return null;
+  }
+
   DateTime get effectiveCreatedAt => createdAt ?? date ?? DateTime.now();
 
   DateTime get effectiveDate => date ?? createdAt ?? DateTime.now();

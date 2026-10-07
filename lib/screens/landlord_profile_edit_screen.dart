@@ -1,13 +1,18 @@
+// lib/screens/landlord_profile_edit_screen.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../core/theme/ramp_theme.dart';
+import '../core/utils/toast_service.dart';
 import '../core/validation/app_validators.dart';
 
 class LandlordProfileEditScreen extends StatefulWidget {
   final String initialName;
   final String initialRole;
   final String initialContact;
+  final String? initialAvatarPath;
   final ValueChanged<LandlordProfileValues> onSaved;
 
   const LandlordProfileEditScreen({
@@ -15,6 +20,7 @@ class LandlordProfileEditScreen extends StatefulWidget {
     required this.initialName,
     required this.initialRole,
     required this.initialContact,
+    this.initialAvatarPath,
     required this.onSaved,
   });
 
@@ -27,11 +33,13 @@ class LandlordProfileValues {
   final String name;
   final String role;
   final String contact;
+  final String? avatarPath;
 
   const LandlordProfileValues({
     required this.name,
     required this.role,
     required this.contact,
+    this.avatarPath,
   });
 }
 
@@ -40,6 +48,7 @@ class _LandlordProfileEditScreenState extends State<LandlordProfileEditScreen> {
   late final TextEditingController _nameController;
   late final TextEditingController _roleController;
   late final TextEditingController _contactController;
+  String? _avatarPath;
   bool _isSaving = false;
 
   @override
@@ -48,6 +57,7 @@ class _LandlordProfileEditScreenState extends State<LandlordProfileEditScreen> {
     _nameController = TextEditingController(text: widget.initialName);
     _roleController = TextEditingController(text: widget.initialRole);
     _contactController = TextEditingController(text: widget.initialContact);
+    _avatarPath = widget.initialAvatarPath;
   }
 
   @override
@@ -56,6 +66,139 @@ class _LandlordProfileEditScreenState extends State<LandlordProfileEditScreen> {
     _roleController.dispose();
     _contactController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 1000,
+        maxHeight: 1000,
+        imageQuality: 85,
+      );
+      if (picked != null) {
+        setState(() {
+          _avatarPath = picked.path;
+        });
+        ToastService.showSuccess(
+            source == ImageSource.camera ? 'Photo captured' : 'Photo selected');
+      }
+    } catch (e) {
+      ToastService.showError('Permission or media error: $e');
+    }
+  }
+
+  void _showImageSourceSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Profile Picture',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                Text(
+                  'Select or capture a new photo for your profile avatar.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: isDark ? const Color(0xFF94A3B8) : RampColors.mutedText,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: RampColors.softBlueTint,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.photo_camera_rounded,
+                        color: RampColors.primary),
+                  ),
+                  title: Text(
+                    'Take Photo',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text('Capture using device camera'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.camera);
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: RampColors.softBlueTint,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.photo_library_rounded,
+                        color: RampColors.primary),
+                  ),
+                  title: Text(
+                    'Choose from Gallery',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text('Select an image from photo library'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.gallery);
+                  },
+                ),
+                if (_avatarPath != null && _avatarPath!.isNotEmpty)
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: RampColors.dangerTint,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.delete_outline_rounded,
+                          color: RampColors.danger),
+                    ),
+                    title: Text(
+                      'Remove Photo',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        color: RampColors.danger,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      setState(() => _avatarPath = null);
+                      ToastService.showInfo('Profile picture removed');
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<bool> _confirmLeave() async {
@@ -84,7 +227,8 @@ class _LandlordProfileEditScreenState extends State<LandlordProfileEditScreen> {
   bool get _hasChanges =>
       _nameController.text != widget.initialName ||
       _roleController.text != widget.initialRole ||
-      _contactController.text != widget.initialContact;
+      _contactController.text != widget.initialContact ||
+      _avatarPath != widget.initialAvatarPath;
 
   void _save() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -96,6 +240,7 @@ class _LandlordProfileEditScreenState extends State<LandlordProfileEditScreen> {
         name: name,
         role: _roleController.text.trim(),
         contact: _contactController.text.trim(),
+        avatarPath: _avatarPath,
       ),
     );
     Navigator.pop(context);
@@ -126,6 +271,9 @@ class _LandlordProfileEditScreenState extends State<LandlordProfileEditScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final hasLocalAvatar = _avatarPath != null &&
+        _avatarPath!.isNotEmpty &&
+        File(_avatarPath!).existsSync();
 
     return PopScope(
       canPop: false,
@@ -163,6 +311,7 @@ class _LandlordProfileEditScreenState extends State<LandlordProfileEditScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Avatar Banner Card
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
@@ -173,32 +322,74 @@ class _LandlordProfileEditScreenState extends State<LandlordProfileEditScreen> {
                         ),
                         child: Row(
                           children: [
-                            CircleAvatar(
-                              radius: 34,
-                              backgroundColor: RampColors.primary,
-                              child: Text(
-                                _nameController.text.trim().isEmpty
-                                    ? 'AP'
-                                    : _nameController.text
-                                        .trim()
-                                        .substring(0, 1)
-                                        .toUpperCase(),
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                            GestureDetector(
+                              onTap: _showImageSourceSheet,
+                              child: Stack(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 36,
+                                    backgroundColor: RampColors.primary,
+                                    backgroundImage: hasLocalAvatar
+                                        ? FileImage(File(_avatarPath!))
+                                        : null,
+                                    child: !hasLocalAvatar
+                                        ? Text(
+                                            _nameController.text.trim().isEmpty
+                                                ? 'AP'
+                                                : _nameController.text
+                                                    .trim()
+                                                    .substring(0, 1)
+                                                    .toUpperCase(),
+                                            style: GoogleFonts.poppins(
+                                              color: Colors.white,
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          )
+                                        : null,
+                                  ),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: RampColors.primary,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                            color: Colors.white, width: 2),
+                                      ),
+                                      child: const Icon(
+                                        Icons.camera_alt_rounded,
+                                        size: 14,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(width: 14),
+                            const SizedBox(width: 16),
                             Expanded(
-                              child: Text(
-                                'Keep your landlord information clear and up to date.',
-                                style: GoogleFonts.poppins(
-                                  color: scheme.onSurfaceVariant,
-                                  fontSize: 13,
-                                  height: 1.45,
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Profile Avatar',
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Tap the avatar to take a picture or pick from gallery.',
+                                    style: GoogleFonts.poppins(
+                                      color: scheme.onSurfaceVariant,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],

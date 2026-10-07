@@ -24,11 +24,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC);
-    
+    final bgColor = Theme.of(context).scaffoldBackgroundColor;
     return Scaffold(
-      backgroundColor: bgColor,
       body: Stack(
         children: [
           // Scrollable Content

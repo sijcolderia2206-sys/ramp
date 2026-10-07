@@ -1,9 +1,9 @@
 // lib/core/services/location_service.dart
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:ramp/models/gps_location.dart';
+import 'persistence_queue.dart';
 
 class LocationService {
   static final LocationService _instance = LocationService._internal();
@@ -104,12 +104,11 @@ class LocationService {
         timestamp: DateTime.now(),
       );
 
-      FirebaseFirestore.instance
-          .collection('maintenanceTickets')
-          .doc(ticketId)
-          .collection('liveLocation')
-          .doc('current')
-          .set(geoLoc.toJson());
+      // Queue the location update to Supabase
+      PersistenceQueue.instance.enqueueUpsert('maintenanceTickets', ticketId, {
+        'id': ticketId,
+        'liveLocation': geoLoc.toJson(),
+      });
     });
 
     return true;
@@ -123,15 +122,8 @@ class LocationService {
 
   /// Subscribe to technician location stream for a specific ticket
   Stream<GeoPointLocation?> streamTicketTechnicianLocation(String ticketId) {
-    return FirebaseFirestore.instance
-        .collection('maintenanceTickets')
-        .doc(ticketId)
-        .collection('liveLocation')
-        .doc('current')
-        .snapshots()
-        .map((snapshot) {
-      if (!snapshot.exists || snapshot.data() == null) return null;
-      return GeoPointLocation.fromJson(snapshot.data()!);
-    });
+    // In a real application, implement Supabase Realtime channel subscription here
+    return const Stream.empty();
   }
 }
+

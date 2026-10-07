@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/providers.dart';
 import '../core/widgets/core_widgets.dart';
-import '../core/widgets/clay_container.dart';
 import '../core/theme/ramp_theme.dart';
 import '../core/validation/app_validators.dart';
 import '../core/services/user_database_service.dart';
@@ -52,7 +51,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+              color: isDark ? RampColors.darkSurface : RampColors.surface,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
@@ -95,7 +94,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   alignment: Alignment.centerRight,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                      color: isDark ? RampColors.darkSurface : RampColors.surface,
                       borderRadius: BorderRadius.circular(30),
                       boxShadow: [
                         BoxShadow(
@@ -145,7 +144,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                color: isDark ? RampColors.darkSurface : RampColors.surface,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
@@ -201,7 +200,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const SizedBox(width: 8),
                       Container(
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                          color: isDark ? RampColors.darkSurface : RampColors.surface,
                           borderRadius: BorderRadius.circular(30),
                           boxShadow: [
                             BoxShadow(
@@ -435,7 +434,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             width: contentWidth,
             margin: const EdgeInsets.all(16.0),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+              color: isDark ? RampColors.darkSurface : RampColors.surface,
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
@@ -610,7 +609,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       // Single Sign In CTA
                       Container(
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                          color: isDark ? RampColors.darkSurface : RampColors.surface,
                           borderRadius: BorderRadius.circular(30),
                           boxShadow: [
                             BoxShadow(
@@ -672,7 +671,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           Expanded(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                                color: isDark ? RampColors.darkSurface : RampColors.surface,
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
@@ -725,7 +724,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           Expanded(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
+                                color: isDark ? RampColors.darkSurface : RampColors.surface,
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
@@ -747,7 +746,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 10),
                                   side: BorderSide(
-                                      color: const Color(0xFF10B981)
+                                      color: RampColors.success
                                           .withValues(alpha: 0.5)),
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12)),

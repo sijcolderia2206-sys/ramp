@@ -1,75 +1,63 @@
-// lib/core/services/user_database_service.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import '../../models/user_role.dart';
 import '../network/result.dart';
 import 'supabase_service.dart';
+import 'persistence_queue.dart';
+import '../network/supabase/supabase_config.dart';
 
-/// Database service dedicated to User Profile & Role management in Firestore and Supabase
-class UserDatabaseService {
-  UserDatabaseService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+/// Clean Repository interface for User management
+abstract class IUserRepository {
+  Future<Result<RampUser>> getUserProfile(String uid);
+  Future<Result<void>> upsertUserProfile(RampUser user);
+  Future<Result<RampUser>> createOrEnsureUserProfile({
+    required String uid,
+    required String email,
+    required String displayName,
+    required UserRole role,
+    String? tenantId,
+    String? landlordId,
+    bool mustChangePassword = false,
+  });
+  Future<Result<void>> updateUserRole(String uid, UserRole newRole);
+  Future<Result<RampUser>> ensureTenantUserAccount({
+    required String tenantId,
+    required String tenantName,
+    String? email,
+    bool mustChangePassword = true,
+  });
+  Future<Result<void>> clearMustChangePassword(String uid);
+  Stream<RampUser?> userProfileStream(String uid);
+}
 
-  final FirebaseFirestore _firestore;
+/// Database service dedicated to User Profile & Role management in Supabase (Primary via SupabaseService & PersistenceQueue)
+class UserDatabaseService implements IUserRepository {
+  UserDatabaseService();
+
   static const String _usersCollection = 'users';
 
-  /// Fetch user profile by UID (checks Supabase first, falls back to Firestore)
+  /// Fetch user profile by UID (Primary source of truth: Supabase)
+  @override
   Future<Result<RampUser>> getUserProfile(String uid) async {
     try {
       if (uid.trim().isEmpty) {
         return Result.failure('Invalid user UID provided.');
       }
 
-      // 1. Try Supabase users table first
-      try {
-        final supaRes = await SupabaseService().loadTable(_usersCollection);
-        final usersData = supaRes.dataOrNull ?? [];
-        final matched = usersData.firstWhere(
-          (u) => u['uid'] == uid || u['id'] == uid,
-          orElse: () => <String, dynamic>{},
-        );
-        if (matched.isNotEmpty) {
-          final rampUser = RampUser.fromJson(matched, uid);
-          return Result.success(rampUser);
-        }
-      } catch (e) {
-        debugPrint('ℹ️ Supabase getUserProfile notice [$uid]: $e');
-      }
-
-      // 2. Fallback to Firestore users collection
-      DocumentSnapshot<Map<String, dynamic>>? doc;
-      try {
-        doc = await _firestore
-            .collection(_usersCollection)
-            .doc(uid)
-            .get(const GetOptions(source: Source.serverAndCache))
-            .timeout(const Duration(seconds: 3));
-      } catch (_) {
-        try {
-          doc = await _firestore
-              .collection(_usersCollection)
-              .doc(uid)
-              .get(const GetOptions(source: Source.cache));
-        } catch (e) {
-          debugPrint('ℹ️ Firestore getUserProfile notice [$uid]: $e');
-          return Result.failure('Firestore unavailable for user profile.', e);
-        }
-      }
-
-      if (!doc.exists || doc.data() == null) {
+      final supaRes = await SupabaseService().loadTable(_usersCollection);
+      final usersData = supaRes.dataOrNull ?? [];
+      final matched = usersData.firstWhere(
+        (u) => u['uid'] == uid || u['id'] == uid,
+        orElse: () => <String, dynamic>{},
+      );
+      
+      if (matched.isEmpty) {
         return Result.failure(
             'User document not found in database for UID: $uid');
       }
 
-      final rampUser = RampUser.fromJson(doc.data()!, doc.id);
-
-      // Auto-sync profile to Supabase to establish single source of truth
-      final userMap = rampUser.toJson();
-      userMap['id'] = rampUser.uid;
-      SupabaseService().upsertRecord(_usersCollection, userMap);
-
+      final rampUser = RampUser.fromJson(matched, uid);
       return Result.success(rampUser);
     } catch (e, stack) {
       debugPrint('❌ getUserProfile Exception [$uid]: $e\n$stack');
@@ -77,26 +65,15 @@ class UserDatabaseService {
     }
   }
 
-  /// Save or update user profile in both Firestore and Supabase
+  /// Save or update user profile in Supabase
+  @override
   Future<Result<void>> upsertUserProfile(RampUser user) async {
     try {
       final userMap = user.toJson();
       userMap['id'] = user.uid;
 
-      // 1. Write to Firestore for Auth security rules
-      try {
-        final docRef = _firestore.collection(_usersCollection).doc(user.uid);
-        await docRef.set(userMap, SetOptions(merge: true));
-      } catch (e) {
-        debugPrint('ℹ️ Firestore upsertUserProfile notice [${user.uid}]: $e');
-      }
-
-      // 2. Sync to Supabase master database
-      try {
-        await SupabaseService().upsertRecord(_usersCollection, userMap);
-      } catch (e) {
-        debugPrint('ℹ️ Supabase upsertUserProfile notice [${user.uid}]: $e');
-      }
+      // Queue sync to Supabase master database
+      PersistenceQueue.instance.enqueueUpsert(_usersCollection, user.uid, userMap);
 
       return Result.success(null);
     } catch (e, stack) {
@@ -106,6 +83,7 @@ class UserDatabaseService {
   }
 
   /// Create user profile upon registration or fallback login
+  @override
   Future<Result<RampUser>> createOrEnsureUserProfile({
     required String uid,
     required String email,
@@ -151,18 +129,16 @@ class UserDatabaseService {
     }
   }
 
-  /// Super Admin functionality: Update user role in both Firestore and Supabase
+  /// Super Admin functionality: Update user role in Supabase
+  @override
   Future<Result<void>> updateUserRole(String uid, UserRole newRole) async {
     try {
-      await _firestore.collection(_usersCollection).doc(uid).update({
-        'role': newRole.value,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      await SupabaseService().upsertRecord(_usersCollection, {
+      PersistenceQueue.instance.enqueueUpsert(_usersCollection, uid, {
         'id': uid,
         'uid': uid,
         'role': newRole.value,
       });
+      
       return Result.success(null);
     } catch (e) {
       debugPrint('❌ updateUserRole Error [$uid -> ${newRole.value}]: $e');
@@ -171,6 +147,7 @@ class UserDatabaseService {
   }
 
   /// Ensures a RampUser account profile exists for a tenant record with default password "tenant123"
+  @override
   Future<Result<RampUser>> ensureTenantUserAccount({
     required String tenantId,
     required String tenantName,
@@ -182,8 +159,6 @@ class UserDatabaseService {
         : 'tenant_$tenantId@ramp.local';
     final uid = 'user_$tenantId';
 
-    // Attempt creation in Firebase Auth with default password "tenant123"
-    // Use a secondary Firebase app to prevent logging out the current admin/landlord
     try {
       if (Firebase.apps.isNotEmpty) {
         FirebaseApp secondaryApp;
@@ -200,7 +175,6 @@ class UserDatabaseService {
           email: effectiveEmail,
           password: 'tenant123',
         );
-        // Do not sign in on the main instance, keeps admin logged in.
       }
     } catch (e) {
       debugPrint('ℹ️ Auth tenant account setup notice [$effectiveEmail]: $e');
@@ -217,17 +191,15 @@ class UserDatabaseService {
   }
 
   /// Clears the password change requirement after tenant updates default password
+  @override
   Future<Result<void>> clearMustChangePassword(String uid) async {
     try {
-      await _firestore.collection(_usersCollection).doc(uid).update({
-        'mustChangePassword': false,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      await SupabaseService().upsertRecord(_usersCollection, {
+      PersistenceQueue.instance.enqueueUpsert(_usersCollection, uid, {
         'id': uid,
         'uid': uid,
         'mustChangePassword': false,
       });
+      
       return Result.success(null);
     } catch (e) {
       debugPrint('❌ clearMustChangePassword Error [$uid]: $e');
@@ -235,16 +207,20 @@ class UserDatabaseService {
     }
   }
 
-  /// Listen to real-time user document changes from Firestore
+  /// Listen to real-time user document changes from Supabase
+  @override
   Stream<RampUser?> userProfileStream(String uid) {
     if (uid.isEmpty) return Stream.value(null);
-    return _firestore
-        .collection(_usersCollection)
-        .doc(uid)
-        .snapshots()
-        .map((snapshot) {
-      if (!snapshot.exists || snapshot.data() == null) return null;
-      return RampUser.fromJson(snapshot.data()!, snapshot.id);
-    });
+    
+    // Supabase streaming implementation using client
+    return SupabaseConfig.client
+        .from(_usersCollection)
+        .stream(primaryKey: ['id'])
+        .eq('uid', uid)
+        .map((data) {
+          if (data.isEmpty) return null;
+          final mapped = SupabaseService.toCamelCaseMap(data.first);
+          return RampUser.fromJson(mapped, uid);
+        });
   }
 }

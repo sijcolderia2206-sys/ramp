@@ -140,7 +140,7 @@ class SupabaseService {
       final response = await _client
           .from(targetTable)
           .select()
-          .timeout(const Duration(seconds: 3));
+          .timeout(const Duration(seconds: 10));
       final data = List<Map<String, dynamic>>.from(response)
           .map((row) => toCamelCaseMap(row))
           .toList();
@@ -177,7 +177,7 @@ class SupabaseService {
       await _client
           .from(targetTable)
           .upsert(payload)
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 10));
       return Result.success(null);
     } catch (e) {
       debugPrint('❌ Supabase upsertRecord error for [$targetTable]: $e');
@@ -192,7 +192,7 @@ class SupabaseService {
           .from(targetTable)
           .delete()
           .eq('id', id)
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 10));
       return Result.success(null);
     } catch (e) {
       debugPrint('❌ Supabase deleteRecord error for [$targetTable]: $e');

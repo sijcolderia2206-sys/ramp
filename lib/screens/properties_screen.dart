@@ -8,7 +8,6 @@ import 'package:latlong2/latlong.dart';
 import '../core/widgets/location_picker_map.dart';
 import '../providers/providers.dart';
 import '../core/widgets/core_widgets.dart';
-import '../core/widgets/clay_container.dart';
 import '../core/navigation/custom_page_transitions.dart';
 import '../core/theme/ramp_theme.dart';
 import '../core/utils/toast_service.dart';

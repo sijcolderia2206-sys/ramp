@@ -15,3 +15,4 @@ export 'shimmer_loading.dart';
 export 'staggered_list_fade.dart';
 export 'status_badge.dart';
 export 'role_guard.dart';
+export 'ramp_icon.dart';

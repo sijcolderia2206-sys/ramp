@@ -13,7 +13,6 @@ import '../core/validation/app_validators.dart';
 import '../providers/providers.dart';
 import '../core/widgets/core_widgets.dart';
 import '../widgets/receipt_modal.dart';
-import '../core/widgets/clay_container.dart';
 
 class TenantPortalScreen extends ConsumerStatefulWidget {
   const TenantPortalScreen({super.key});
@@ -238,7 +237,6 @@ class _TenantPortalScreenState extends ConsumerState<TenantPortalScreen> {
         activeTenant.monthlyRent + waterCharge + electricCharge + lateFee;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
       appBar: AppBar(
         title: Text(
           'Tenant Portal',

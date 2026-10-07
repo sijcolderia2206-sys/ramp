@@ -142,20 +142,23 @@ class _ClayContainerState extends State<ClayContainer>
           ];
         }
 
-        Widget result = Container(
+        Widget result = AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
           width: widget.width,
           height: widget.height,
           margin: widget.margin,
           alignment: widget.alignment,
           clipBehavior: widget.clipBehavior,
           decoration: BoxDecoration(
+            color: widget.gradient != null ? null : baseColor,
             borderRadius: BorderRadius.circular(widget.borderRadius),
             gradient: widget.gradient,
             border: widget.border,
             boxShadow: buildShadows(),
           ),
           child: Material(
-            color: widget.gradient != null ? Colors.transparent : baseColor,
+            type: MaterialType.transparency,
             borderRadius: BorderRadius.circular(widget.borderRadius),
             clipBehavior: widget.clipBehavior == Clip.none
                 ? Clip.antiAlias

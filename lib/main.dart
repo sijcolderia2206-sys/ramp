@@ -10,6 +10,7 @@ import 'providers/providers.dart';
 import 'screens/screens.dart';
 import 'core/widgets/core_widgets.dart';
 import 'core/utils/toast_service.dart';
+import 'core/router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -75,46 +76,34 @@ class _RampAppState extends ConsumerState<RampApp> {
 
   @override
   Widget build(BuildContext context) {
-    final isAuthenticated = ref.watch(authProvider) != null;
     final themeMode = ref.watch(themeModeProvider);
 
-    Widget homeWidget;
     if (_isRestoringSession) {
-      homeWidget = const _SessionRestoreScreen();
-    } else if (isAuthenticated) {
-      final roleEnum = ref.watch(userRoleEnumProvider);
-      switch (roleEnum) {
-        case UserRole.superAdmin:
-        case UserRole.landlord:
-          homeWidget = const LandlordShell();
-          break;
-        case UserRole.tenant:
-          homeWidget = const TenantPortalScreen();
-          break;
-      }
-    } else {
-      homeWidget = const LoginScreen();
+      return MaterialApp(
+        title: 'RAMP',
+        debugShowCheckedModeBanner: false,
+        theme: RampTheme.lightTheme,
+        darkTheme: RampTheme.darkTheme,
+        themeMode: themeMode,
+        home: const _SessionRestoreScreen(),
+      );
     }
 
-    return MaterialApp(
-      scaffoldMessengerKey: ToastService.scaffoldKey,
+    final goRouter = ref.watch(goRouterProvider);
+
+    return MaterialApp.router(
       title: 'RAMP',
       debugShowCheckedModeBanner: false,
       theme: RampTheme.lightTheme,
       darkTheme: RampTheme.darkTheme,
       themeMode: themeMode,
+      routerConfig: goRouter,
       builder: (context, child) {
-        final isDark = themeMode == ThemeMode.dark ||
-            (themeMode == ThemeMode.system &&
-                MediaQuery.platformBrightnessOf(context) == Brightness.dark);
-        return AnimatedTheme(
-          data: isDark ? RampTheme.darkTheme : RampTheme.lightTheme,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
+        return ScaffoldMessenger(
+          key: ToastService.scaffoldKey,
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: homeWidget,
     );
   }
 }

@@ -6,11 +6,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../providers/providers.dart';
 import '../core/widgets/core_widgets.dart';
-import '../core/widgets/clay_container.dart';
 import '../core/navigation/custom_page_transitions.dart';
 import '../core/theme/ramp_theme.dart';
 import '../core/services/reminder_launcher_service.dart';
 import '../core/utils/toast_service.dart';
+import '../widgets/maintenance_ticket_card.dart';
 import 'ticket_form.dart';
 
 class MaintenanceScreen extends ConsumerStatefulWidget {
@@ -49,12 +49,6 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
     _searchCtrl.dispose();
     super.dispose();
   }
-
-  static final NumberFormat _currencyFormat = NumberFormat.currency(
-    locale: 'en_PH',
-    symbol: '₱',
-    decimalDigits: 2,
-  );
 
   // --- STAGE 1: SCHEDULE VISIT DIALOG ---
   void _showScheduleVisitSheet(BuildContext context, Ticket ticket) {
@@ -913,21 +907,7 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
     );
   }
 
-  Color _getStatusDotColor(Ticket ticket) {
-    if (ticket.status == 'Completed' ||
-        ticket.status == 'Closed' ||
-        ticket.status.toLowerCase() == 'resolved') {
-      return RampColors.success;
-    }
-    if (ticket.priority.toLowerCase() == 'urgent' ||
-        ticket.priority.toLowerCase() == 'emergency') {
-      return RampColors.danger;
-    }
-    if (ticket.priority.toLowerCase() == 'high') {
-      return RampColors.warning;
-    }
-    return RampColors.primary;
-  }
+
 
   void _confirmDeleteTicket(BuildContext context, Ticket ticket) {
     showDialog<void>(
@@ -956,392 +936,25 @@ class _MaintenanceScreenState extends ConsumerState<MaintenanceScreen> {
   }
 
   Widget _buildTicketCard(Ticket ticket) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final foreground = theme.colorScheme.onSurface;
-    final muted = theme.colorScheme.onSurfaceVariant;
-    final completed = ticket.status == 'Completed' || ticket.status == 'Closed';
     final isExpanded = _expandedTicketIds.contains(ticket.id);
-    final statusColor = _getStatusDotColor(ticket);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0E5EC),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFA3B1C6).withValues(alpha: 0.6),
-            blurRadius: 10,
-            offset: const Offset(5, 5),
-          ),
-          BoxShadow(
-            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.8),
-            blurRadius: 10,
-            offset: const Offset(-5, -5),
-          ),
-        ],
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => setState(() {
-          if (isExpanded) {
-            _expandedTicketIds.remove(ticket.id);
-          } else {
-            _expandedTicketIds.add(ticket.id);
-          }
-        }),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  // Single Colored Dot on the Left Side
-                  Container(
-                    width: 10,
-                    height: 10,
-                    margin: const EdgeInsets.only(right: 10),
-                    decoration: BoxDecoration(
-                      color: statusColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      ticket.title.replaceAll(RegExp(r'^Ticket:\s*', caseSensitive: false), ''),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: foreground,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  PopupMenuButton<String>(
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    icon: Icon(Icons.more_vert_rounded, size: 20, color: muted),
-                    tooltip: 'Ticket Actions',
-                    onSelected: (val) {
-                      if (val == 'edit') {
-                        _openTicketForm(existingTicket: ticket);
-                      } else if (val == 'timeline') {
-                        _showTimelineModal(context, ticket);
-                      } else if (val == 'delete') {
-                        _confirmDeleteTicket(context, ticket);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit_outlined, size: 18),
-                            SizedBox(width: 8),
-                            Text('Edit Ticket'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'timeline',
-                        child: Row(
-                          children: [
-                            Icon(Icons.history_rounded, size: 18),
-                            SizedBox(width: 8),
-                            Text('View Timeline'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete_outline_rounded,
-                                size: 18, color: RampColors.danger),
-                            SizedBox(width: 8),
-                            Text('Delete Ticket',
-                                style: TextStyle(color: RampColors.danger)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 4),
-                  AnimatedRotation(
-                    turns: isExpanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 180),
-                    child:
-                        Icon(Icons.keyboard_arrow_down_rounded, color: muted),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Padding(
-                padding: const EdgeInsets.only(left: 20.0),
-                child: Text(
-                  '${ticket.unitNumber} \u2022 ${ticket.tenantName}',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontSize: 12,
-                    color: muted,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Stage Status Pill, Priority Badge & Areas
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: completed
-                          ? const Color(0xFF059669).withValues(alpha: 0.15)
-                          : theme.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      ticket.status,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: completed
-                            ? const Color(0xFF059669)
-                            : theme.colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: (ticket.priority.toLowerCase() == 'high' ||
-                              ticket.priority.toLowerCase() == 'urgent' ||
-                              ticket.priority.toLowerCase() == 'emergency')
-                          ? const Color(0xFFEF4444).withValues(alpha: 0.15)
-                          : const Color(0xFFF59E0B).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'Priority: ${ticket.priority}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: (ticket.priority.toLowerCase() == 'high' ||
-                                ticket.priority.toLowerCase() == 'urgent' ||
-                                ticket.priority.toLowerCase() == 'emergency')
-                            ? const Color(0xFFEF4444)
-                            : const Color(0xFFD97706),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  if (completed && ticket.rating > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEAB308).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.star_rounded,
-                              size: 14, color: Color(0xFFEAB308)),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Rating: ${ticket.rating}/5',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFFA16207),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (ticket.affectedAreas.isNotEmpty)
-                    ...ticket.affectedAreas.map((area) => Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            area,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              fontSize: 11,
-                              color: muted,
-                            ),
-                          ),
-                        )),
-                ],
-              ),
-
-              if (isExpanded) ...[
-                const SizedBox(height: 14),
-                if (ticket.description.isNotEmpty) ...[
-                  Text(ticket.description,
-                      style: GoogleFonts.poppins(fontSize: 13, color: muted)),
-                  const SizedBox(height: 12),
-                ],
-
-                // Workflow Step Callouts
-                if (ticket.visitScheduledAt != null) ...[
-                  Row(
-                    children: [
-                      const Icon(Icons.event_available_rounded,
-                          size: 16, color: RampColors.primary),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                            'Visit Scheduled: ${DateFormat("MMM dd, yyyy").format(ticket.visitScheduledAt!)} (${ticket.visitTimeWindow})',
-                            style: GoogleFonts.poppins(
-                                fontSize: 12, fontWeight: FontWeight.w500)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  if (ticket.visitReminderSent)
-                    Text('Tenant visit reminder prepared',
-                        style: GoogleFonts.poppins(
-                            fontSize: 11, color: RampColors.success)),
-                ],
-                if (ticket.replacementItems.isNotEmpty ||
-                    ticket.estimatedCost > 0) ...[
-                  Row(
-                    children: [
-                      const Icon(Icons.build_circle_outlined,
-                          size: 16, color: RampColors.warning),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                            'Estimate: ${_currencyFormat.format(ticket.estimatedCost)} (${ticket.replacementItems.join(", ")})',
-                            style: GoogleFonts.poppins(
-                                fontSize: 12, fontWeight: FontWeight.w500)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  if (ticket.repairReminderSent)
-                    Text('Tenant repair reminder prepared',
-                        style: GoogleFonts.poppins(
-                            fontSize: 11, color: RampColors.success)),
-                ],
-                if (ticket.isCompletedStage &&
-                    ticket.completionSummary.isNotEmpty) ...[
-                  Text('Completed: ${ticket.completionSummary}',
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.poppins(
-                          fontSize: 12, fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 6),
-                ],
-                if (ticket.repairScheduledAt != null) ...[
-                  Row(
-                    children: [
-                      const Icon(Icons.handyman_rounded,
-                          size: 16, color: RampColors.success),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                            'Repair Date: ${DateFormat("MMM dd, yyyy").format(ticket.repairScheduledAt!)} by ${ticket.repairer}',
-                            style: GoogleFonts.poppins(
-                                fontSize: 12, fontWeight: FontWeight.w500)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                ],
-
-                const Divider(height: 20),
-
-                // Progressive Stage Action Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _showTimelineModal(context, ticket),
-                        icon: const Icon(Icons.history_rounded, size: 16),
-                        label: const FittedBox(
-                            fit: BoxFit.scaleDown, child: Text('Timeline')),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // Progressive Action Button based on current stage
-                    if (ticket.isScheduleVisitStage)
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: RampColors.primary,
-                              foregroundColor: Colors.white),
-                          icon: const Icon(Icons.calendar_month_rounded,
-                              size: 16),
-                          label: const FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text('Schedule Visit')),
-                          onPressed: () =>
-                              _showScheduleVisitSheet(context, ticket),
-                        ),
-                      )
-                    else if (ticket.isEstimateStage)
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: RampColors.warning,
-                              foregroundColor: Colors.white),
-                          icon:
-                              const Icon(Icons.attach_money_rounded, size: 16),
-                          label: const FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text('Set Estimate')),
-                          onPressed: () => _showEstimateSheet(context, ticket),
-                        ),
-                      )
-                    else if (ticket.isScheduleRepairStage)
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: RampColors.primary,
-                              foregroundColor: Colors.white),
-                          icon: const Icon(Icons.build_rounded, size: 16),
-                          label: const FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text('Schedule Repair')),
-                          onPressed: () =>
-                              _showScheduleRepairSheet(context, ticket),
-                        ),
-                      )
-                    else if (ticket.isCompletedStage)
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.check_circle_outline_rounded,
-                              size: 16, color: RampColors.success),
-                          label: const FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text('Summary',
-                                style: TextStyle(color: RampColors.success)),
-                          ),
-                          onPressed: () =>
-                              _showSavedCompletionSummary(context, ticket),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
+    return MaintenanceTicketCard(
+      ticket: ticket,
+      isExpanded: isExpanded,
+      onTap: () => setState(() {
+        if (isExpanded) {
+          _expandedTicketIds.remove(ticket.id);
+        } else {
+          _expandedTicketIds.add(ticket.id);
+        }
+      }),
+      onEdit: () => _openTicketForm(existingTicket: ticket),
+      onViewTimeline: () => _showTimelineModal(context, ticket),
+      onDelete: () => _confirmDeleteTicket(context, ticket),
+      onScheduleVisit: ticket.isScheduleVisitStage ? () => _showScheduleVisitSheet(context, ticket) : null,
+      onEstimate: ticket.isEstimateStage ? () => _showEstimateSheet(context, ticket) : null,
+      onScheduleRepair: ticket.isScheduleRepairStage ? () => _showScheduleRepairSheet(context, ticket) : null,
+      onComplete: ticket.isCompletedStage ? () => _showSavedCompletionSummary(context, ticket) : null,
     );
   }
 
@@ -1759,8 +1372,6 @@ class _AnimatedRepairProgressTimelineSheetState
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = RampColors.primary;
     final completedColor = RampColors.success;
-    final surfaceBg = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final cardBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final borderClr = isDark ? const Color(0xFF334155) : RampColors.border;
 
     final steps = [

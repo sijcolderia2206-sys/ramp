@@ -9,7 +9,6 @@ import '../core/theme/ramp_theme.dart';
 import '../core/utils/toast_service.dart';
 import '../core/validation/app_validators.dart';
 import '../core/widgets/bouncing_interactive.dart';
-import '../core/widgets/clay_container.dart';
 import '../core/widgets/ramp_text_field.dart';
 import '../providers/providers.dart';
 
