@@ -1,4 +1,3 @@
-import 'dart:io';
 import '../core/widgets/adaptive_row.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -11,10 +10,7 @@ import '../core/navigation/custom_page_transitions.dart';
 import '../core/services/report_export_service.dart';
 import '../core/state/ramp_state.dart';
 import '../core/theme/ramp_theme.dart';
-import '../core/utils/toast_service.dart';
 import '../features/settings/settings_screen.dart';
-import '../features/settings/sub_screens/billing_rules_settings_screen.dart';
-import '../features/settings/sub_screens/security_settings_screen.dart';
 import 'landlord_profile_edit_screen.dart';
 
 class ProfileLandlordScreen extends ConsumerStatefulWidget {
@@ -295,11 +291,21 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                                   if (!context.mounted) return;
                                   Navigator.pop(context);
                                   HapticFeedback.mediumImpact();
-                                  ToastService.showInfo('PDF saved to $path');
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(SnackBar(
+                                    backgroundColor: RampColors.primary,
+                                    duration: const Duration(seconds: 6),
+                                    content: Text('PDF saved to $path'),
+                                  ));
                                 } catch (error) {
                                   setModalState(() => isGenerating = false);
                                   if (!context.mounted) return;
-                                  ToastService.showError('Could not export PDF: $error');
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(SnackBar(
+                                    backgroundColor: RampColors.danger,
+                                    content:
+                                        Text('Could not export PDF: $error'),
+                                  ));
                                 }
                               },
                             ),
@@ -385,7 +391,13 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                 persistAppSettings(defaultLateFee: newFee);
                 Navigator.pop(context);
                 HapticFeedback.lightImpact();
-                ToastService.showSuccess('Late Fee setting updated to ₱${newFee.toInt()}!');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: RampColors.success,
+                    content:
+                        Text('Late Fee setting updated to ₱${newFee.toInt()}!'),
+                  ),
+                );
               },
               label: const Text('SAVE SETTING'),
             ),
@@ -458,8 +470,13 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
               onPressed: () {
                 Navigator.pop(context);
                 HapticFeedback.lightImpact();
-                ToastService.showSuccess(
-                    'Monthly Due Date setting updated to ${ref.read(dueDateDayProvider)}th of the month!');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: RampColors.success,
+                    content: Text(
+                        'Monthly Due Date setting updated to ${ref.read(dueDateDayProvider)}th of the month!'),
+                  ),
+                );
               },
               label: const Text('SAVE SETTING'),
             ),
@@ -517,9 +534,9 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                 const Divider(height: 24),
                 ListTile(
                   leading:
-                      const Icon(Icons.settings_suggest_rounded, color: RampColors.primary),
-                  title: const Text('All Settings Categories'),
-                  subtitle: const Text('Account, billing, security, notifications & data'),
+                      const Icon(Icons.tune_rounded, color: RampColors.primary),
+                  title: const Text('Advanced Preferences'),
+                  subtitle: const Text('Biometrics, currency & security logs'),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () {
                     Navigator.pop(context);
@@ -531,28 +548,25 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                 ListTile(
                   leading: const Icon(Icons.monetization_on_rounded,
                       color: Color(0xFFD97706)),
-                  title: const Text('Financial & Billing Rules'),
+                  title: const Text('Late Fee Configuration'),
                   subtitle: Text(
-                      'Rent due day: ${ref.read(dueDateDayProvider)}th • Late fee: ${_currencyFormat.format(ref.read(lateFeeAmountProvider))}'),
+                      'Current: ${_currencyFormat.format(ref.read(lateFeeAmountProvider))}'),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.of(context, rootNavigator: true).push(
-                      SlideUpFadeRoute(page: const BillingRulesSettingsScreen()),
-                    );
+                    _showEditLateFeeDialog(context);
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.security_rounded,
+                  leading: const Icon(Icons.event_note_rounded,
                       color: RampColors.primary),
-                  title: const Text('Security & Biometrics'),
-                  subtitle: const Text('Authentication, lock policy & audit trail'),
+                  title: const Text('Default Rent Due Date'),
+                  subtitle: Text(
+                      'Fallback for units without an override: ${ref.read(dueDateDayProvider)}th of month'),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.of(context, rootNavigator: true).push(
-                      SlideUpFadeRoute(page: const SecuritySettingsScreen()),
-                    );
+                    _showEditDueDateDialog(context);
                   },
                 ),
               ],
@@ -618,28 +632,14 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                             CircleAvatar(
                               radius: 36,
                               backgroundColor: accent,
-                              backgroundImage: (landlordProfile.avatarPath != null &&
-                                      landlordProfile.avatarPath!.isNotEmpty &&
-                                      File(landlordProfile.avatarPath!).existsSync())
-                                  ? FileImage(File(landlordProfile.avatarPath!))
-                                  : null,
-                              child: (landlordProfile.avatarPath == null ||
-                                      landlordProfile.avatarPath!.isEmpty ||
-                                      !File(landlordProfile.avatarPath!).existsSync())
-                                  ? Text(
-                                      landlordProfile.name.trim().isEmpty
-                                          ? 'AP'
-                                          : landlordProfile.name
-                                              .trim()
-                                              .substring(0, 1)
-                                              .toUpperCase(),
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 26,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : null,
+                              child: Text(
+                                'EM',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
@@ -687,8 +687,6 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                                             initialRole: landlordProfile.role,
                                             initialContact:
                                                 landlordProfile.contact,
-                                            initialAvatarPath:
-                                                landlordProfile.avatarPath,
                                             onSaved: (values) {
                                               ref
                                                   .read(landlordProfileProvider
@@ -697,13 +695,13 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                                                 name: values.name,
                                                 role: values.role,
                                                 contact: values.contact,
-                                                avatarPath: values.avatarPath,
+                                                avatarPath: landlordProfile.avatarPath,
                                               );
                                               persistAppSettings(
                                                 landlordName: values.name,
                                                 landlordRole: values.role,
                                                 landlordContact: values.contact,
-                                                landlordAvatarPath: values.avatarPath,
+                                                landlordAvatarPath: landlordProfile.avatarPath,
                                               );
                                             },
                                           ),
@@ -873,8 +871,6 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                           activeTrackColor: accent,
                           onChanged: (val) {
                             HapticFeedback.lightImpact();
-                            ref.read(themeModeProvider.notifier).state =
-                                val ? ThemeMode.dark : ThemeMode.light;
                             ref.read(darkModeProvider.notifier).state = val;
                             persistAppSettings(darkMode: val);
                           },
@@ -967,6 +963,42 @@ class _ProfileLandlordScreenState extends ConsumerState<ProfileLandlordScreen> {
                   ),
 
                   const SizedBox(height: 28),
+
+                  // SWITCH TO TENANT PORTAL BUTTON
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: RampColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                      ),
+                      icon: const Icon(Icons.person_pin_rounded),
+                      label: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'SWITCH TO TENANT PORTAL VIEW',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      onPressed: () {
+                        ref.read(rampProvider.notifier).setRole('tenant');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Switched to Tenant Portal view'),
+                            backgroundColor: RampColors.primary,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 14),
 
                   // LOGOUT BUTTON (REQUIREMENTS: [Logout Icon])
                   SizedBox(

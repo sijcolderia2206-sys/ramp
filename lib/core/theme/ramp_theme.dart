@@ -7,8 +7,8 @@ import '../widgets/clay_container.dart';
 
 /// Palette & Design Tokens for RAMP (Rental Administration Management Platform)
 class RampColors {
-  /// Neumorphic base light background canvas (#E0E5EC)
-  static const Color background = Color(0xFFE0E5EC);
+  /// Soft neutral background canvas (#F8F9FA)
+  static const Color background = Color(0xFFF8F9FA);
 
   /// Electric Blue Primary (#0D6EFD)
   static const Color primary = Color(0xFF0D6EFD);
@@ -41,23 +41,11 @@ class RampColors {
   static const Color warning = Color(0xFFFFC107);
   static const Color warningTint = Color(0xFFFFF3E0);
 
-  /// Neumorphic Surface
-  static const Color surface = Color(0xFFE0E5EC);
+  /// White Surface
+  static const Color surface = Color(0xFFFFFFFF);
 
   /// Subtle Border
   static const Color border = Color(0xFFE2E8F0);
-  
-  /// Dark Mode Colors
-  static const Color darkBackground = Color(0xFF1E293B);
-  static const Color darkSurface = Color(0xFF1E293B);
-  static const Color darkBorder = Color(0xFF334155);
-
-  /// Primary Gradient
-  static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFF0D6EFD), Color(0xFF0056B3)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
 
   /// Glass / Frosted Overlay
   static const Color glassBackground = Color(0xCCFFFFFF);
@@ -66,22 +54,44 @@ class RampColors {
 
 /// Theme configuration using Google Fonts Poppins with flat minimalist defaults
 class RampTheme {
-  /// Flat shadowless configuration for cards
-  static const List<BoxShadow> flatShadows = [];
+  static const double spacing4 = 4.0;
+  static const double spacing8 = 8.0;
+  static const double spacing16 = 16.0;
+  static const double spacing24 = 24.0;
+  static const double spacing32 = 32.0;
 
-  static const BoxShadow softShadow = BoxShadow(
-    color: Colors.transparent,
-    blurRadius: 0,
-    offset: Offset.zero,
-  );
+  static const Color primaryBlue = RampColors.primary;
+  static const Color textPrimary = RampColors.slate;
+  static const Color textSecondary = RampColors.mutedText;
+  static const Color cardBackground = RampColors.surface;
+  static const Color scaffoldBackground = RampColors.background;
+  static const Color dividerColor = RampColors.border;
+  static const Color successGreen = RampColors.success;
+  static const Color errorRed = RampColors.danger;
+  static const Color warningYellow = RampColors.warning;
 
   static const List<BoxShadow> standardShadow = [
     BoxShadow(
-      color: Color(0x0D000000),
+      color: Color(0x0A000000),
       blurRadius: 10,
       offset: Offset(0, 4),
     ),
   ];
+
+  /// Subtle standard drop shadow for minimalist cards
+  static const List<BoxShadow> flatShadows = [
+    BoxShadow(
+      color: Color(0x0A000000),
+      blurRadius: 10,
+      offset: Offset(0, 4),
+    ),
+  ];
+
+  static const BoxShadow softShadow = BoxShadow(
+    color: Color(0x08000000),
+    blurRadius: 10,
+    offset: Offset(0, 4),
+  );
 
   /// Standard 20px card border radius
   static final BorderRadius borderRadius20 = BorderRadius.circular(20);
@@ -206,8 +216,8 @@ class RampTheme {
   }
 
   static ThemeData get darkTheme {
-    const background = Color(0xFF1E293B);
-    const surface = Color(0xFF1E293B);
+    const background = Color(0xFF101112);
+    const surface = Color(0xFF181A1C);
     const elevated = Color(0xFF222527);
     const text = Color(0xFFF5F5F5);
     const muted = Color(0xFFADB5BD);
@@ -408,14 +418,14 @@ class RampCard extends StatelessWidget {
   }
 
   Color _darkSurfaceColor(Color color) {
-    if (color == RampColors.surface || color == const Color(0xFFFFFFFF)) return const Color(0xFF1E293B);
+    if (color == RampColors.surface) return const Color(0xFF181A1C);
     if (color == RampColors.softBlueTint) return const Color(0xFF202B3D);
     if (color == RampColors.successTint) return const Color(0xFF1E3028);
     if (color == RampColors.warningTint || color == RampColors.peachPillTint) {
       return const Color(0xFF342B1D);
     }
     if (color == RampColors.dangerTint) return const Color(0xFF351F22);
-    if (color == RampColors.background) return const Color(0xFF1E293B);
+    if (color == RampColors.background) return const Color(0xFF101112);
     return color;
   }
 }
@@ -454,9 +464,7 @@ class StatusPill extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
+          Container(
             width: 7,
             height: 7,
             decoration: BoxDecoration(
@@ -465,16 +473,14 @@ class StatusPill extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
+          Text(
+            status,
             style: GoogleFonts.poppins(
               color: textColor,
               fontSize: fontSize,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.2,
             ),
-            child: Text(status),
           ),
         ],
       ),
@@ -486,21 +492,15 @@ class StatusPill extends StatelessWidget {
 
     if (lower == 'occupied') {
       return _PillConfig(
-        textColor: isDark ? const Color(0xFF8CC9A8) : RampColors.success,
-        backgroundColor:
-            isDark ? const Color(0xFF1E3028) : RampColors.successTint,
-      );
-    } else if (lower == 'vacant') {
-      return _PillConfig(
         textColor: isDark ? const Color(0xFF9AB4E8) : RampColors.primary,
         backgroundColor:
             isDark ? const Color(0xFF202B3D) : RampColors.softBlueTint,
       );
-    } else if (lower == 'maintenance') {
+    } else if (lower == 'vacant') {
       return _PillConfig(
-        textColor: isDark ? const Color(0xFFFCD34D) : const Color(0xFFE65100), // Dark Orange
+        textColor: isDark ? const Color(0xFF8CC9A8) : RampColors.success,
         backgroundColor:
-            isDark ? const Color(0xFF452A10) : const Color(0xFFFFF3E0), // Orange Tint
+            isDark ? const Color(0xFF1E3028) : RampColors.successTint,
       );
     } else if (lower == 'paid' || lower == 'verified' || lower == 'resolved') {
       return _PillConfig(
