@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // coverage:ignore-file
-// ignore_for_file: type=lint
+// ignore_for_file: type=lint, type=warning, deprecated_member_use, deprecated_member_use_from_same_package
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
 part of 'maintenance_ticket.dart';
@@ -9,6 +9,7 @@ part of 'maintenance_ticket.dart';
 // FreezedGenerator
 // **************************************************************************
 
+// GENERATED CODE - DO NOT MODIFY BY HAND
 // dart format off
 T _$identity<T>(T value) => value;
 
@@ -22,7 +23,7 @@ mixin _$MaintenanceTicket {
   TicketSeverity get severity;
   TicketStatus get status;
   List<String>? get photoUrls;
-  int? get rating; // 1-to-5 star rating
+  int? get rating;
   DateTime get createdAt;
   DateTime? get resolvedAt;
 
@@ -127,7 +128,7 @@ class _$MaintenanceTicketCopyWithImpl<$Res>
     Object? createdAt = null,
     Object? resolvedAt = freezed,
   }) {
-    return _then(_self.copyWith(
+    return _then(MaintenanceTicket(
       id: null == id
           ? _self.id
           : id // ignore: cast_nullable_to_non_nullable
@@ -413,7 +414,7 @@ class _MaintenanceTicket extends MaintenanceTicket {
       required this.description,
       required this.severity,
       this.status = TicketStatus.open,
-      final List<String>? photoUrls,
+      List<String>? photoUrls,
       this.rating,
       required this.createdAt,
       this.resolvedAt})
@@ -449,7 +450,6 @@ class _MaintenanceTicket extends MaintenanceTicket {
 
   @override
   final int? rating;
-// 1-to-5 star rating
   @override
   final DateTime createdAt;
   @override
